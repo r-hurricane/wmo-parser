@@ -11,7 +11,7 @@
 
 import * as dateFns from 'date-fns';
 
-export default class WmoFile {
+export default class WmoDate {
 	
 	date = null;
 	
@@ -26,9 +26,7 @@ export default class WmoFile {
 			.replace('PDT', '-07:00')
 			.replace('PST', '-08:00');
 			
-		console.log(dateStr, format, dateCtx || new Date());
 		this.date = dateFns.parse(dateStr, format, dateCtx || new Date());
-		console.log(this.date, this.date instanceof Date);
 		if (!this.date || !dateFns.isValid(this.date))
 			throw new Error(`Failed to parse date "${dateStr}" to format "${format}".`);
 	}

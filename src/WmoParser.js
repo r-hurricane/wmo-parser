@@ -69,7 +69,7 @@ export default class WmoParser {
 		}
 	}
 	
-	extract(pattern, trim = true, skipIfEmpty = true) {
+	extract(pattern = /^.*$/, trim = true, skipIfEmpty = true) {
 		const line = trim ? this.currentLine().trim() : this.currentLine();
 		
 		const lineMatch = line.match(pattern);

@@ -11,21 +11,33 @@
 
 import WmoHeader from './WmoHeader.js';
 import WmoParser from './WmoParser.js';
+import designators from './designators/index.js';
 
 export default class WmoFile {
 	
-	#parser;
-	
-	header;
+	fullText = null;
+	options = null;
+	parser = null;
+	header = null;
+	data = null;
 	
 	constructor(wmoText, options) {
+		this.fullText = wmoText;
+		this.options = options;
 		this.parser = new WmoParser(wmoText, options);
 		this.header = new WmoHeader(this.parser);
+		
+		const designator = options?.designator ? options.designator : designators[this.header.designator];
+		if (!designator)
+			throw new Error(`No parser found for designator "${this.header.designator}". Please specify the designator via the 'designator' option.`);
+		
+		this.data = new designator(this);
 	}
 	
 	toJSON() {
 		return {
-			'header': this.header
+			'header': this.header,
+			'data': this.data
 		}
 	}
 	

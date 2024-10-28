@@ -28,22 +28,25 @@ export default class WmoHeader {
 		this.#parser = parser;
 		
 		// Extract the sequence number (optional)
-		this.sequence = parser.extract(/^\s*\d{3}\s*$/);
+		const sequence = parser.extract(/^\s*(\d{3})\s*$/);
+		this.sequence = sequence && parseInt(sequence[1]);
+		
 		
 		// Confirm there is more lines after this
 		if (this.sequence && parser.remainingLines() <= 0)
 			parser.error('Invalid WMO message: Missing Abbreviated Heading. First line was detected as the "starting line" which is optional. Second line should then be the Abbreviated Heading as defined at https://www.weather.gov/tg/head');
 		
 		// Match the abbreviated heading line
-		const abbvHeadingTxt = parser.currentLine();
 		const abbvHeading = parser.extract(/^(\w\w\w\w\d\d)\s+(\w\w\w\w)\s+(?:(\d\d)(\d\d)(\d\d))(?:\s+(?:(RR|CC|AA)([A-X])|P([A-Z])([A-Z])))?$/);
 		if (!abbvHeading)
-			throw new Error('Invalid WMO message: Missing Abbreviated Heading. First line ("' + abbvHeadingTxt + '") should be the Abbreviated Heading as defined at https://www.weather.gov/tg/head');
+			throw new Error('Invalid WMO message: Missing Abbreviated Heading. First line ("' + parser.currentLine() + '") should be the Abbreviated Heading as defined at https://www.weather.gov/tg/head');
 		
 		this.designator = abbvHeading[1];
 		this.station = abbvHeading[2];
 		this.datetime = new WmoDate(`${abbvHeading[3]} ${abbvHeading[4]}:${abbvHeading[5]}Z`, 'dd HH:mmX', parser.getDateContext());
 		
+		// Process Delays, Corrections, Amendments, and Segments
+		// TODO: Should I create these as objects as well? There will be only one of these 4. Could make it a "modifier" object/property?
 		if (abbvHeading[6]) {
 			this[abbvHeading[6] === 'RR' ? 'delay' : abbvHeading[6] === 'CC' ? 'correction' : 'amendment'] = abbvHeading[7];
 		} else if (abbvHeading[8]) {
@@ -53,7 +56,7 @@ export default class WmoHeader {
 	
 	toJSON() {
 		return {
-			'sequence': this.sequence && parseInt(this.sequence[0]),
+			'sequence': this.sequence,
 			'designator': this.designator,
 			'station': this.station,
 			'datetime': this.datetime,
