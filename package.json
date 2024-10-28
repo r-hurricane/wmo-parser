@@ -1,0 +1,33 @@
+{
+  "name": "@r-hurricane/wmo-parser",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A library that can be used to parse various World Meteorological Organization (WMO) text files published by the National Oceanic and Atmospheric Administration (NOAA) and the National Hurricane Center (NHC) into useable objects or JSON. NOTE: This is not an official NWS/WMO library.",
+  "main": "index.js",
+  "scripts": {
+    "test": "./tests/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/r-hurricane/wmo-to-json.git"
+  },
+  "keywords": [
+    "noaa",
+    "nhc",
+    "wmo",
+    "URNT10",
+    "URNT11",
+    "URNT15",
+    "NOUS42",
+    "ABNT20 "
+  ],
+  "author": "Beach-Brews",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/r-hurricane/wmo-parser/issues"
+  },
+  "homepage": "https://github.com/r-hurricane/wmo-parser#readme",
+  "dependencies": {
+    "date-fns": "^4.1.0"
+  }
+}
