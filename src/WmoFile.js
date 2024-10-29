@@ -19,7 +19,7 @@ export default class WmoFile {
 	options = null;
 	parser = null;
 	header = null;
-	data = null;
+	message = null;
 	
 	constructor(wmoText, options) {
 		this.fullText = wmoText;
@@ -31,13 +31,13 @@ export default class WmoFile {
 		if (!designator)
 			throw new Error(`No parser found for designator "${this.header.designator}". Please specify the designator via the 'designator' option.`);
 		
-		this.data = new designator(this);
+		this.message = new designator(this);
 	}
 	
 	toJSON() {
 		return {
 			'header': this.header,
-			'data': this.data
+			'message': this.message
 		}
 	}
 	

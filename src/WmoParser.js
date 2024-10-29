@@ -57,6 +57,11 @@ export default class WmoParser {
 		return this.#fileLines.length - this.#position;
 	}
 	
+	peek(count = 1) {
+		// TODO: Bounds check, return null if EOF
+		return this.#fileLines[this.#position + count];
+	}
+	
 	seek(count = 1) {
 		// TODO: Secondary paramater for origin (start, current, end)
 		// TODO: Bounds check. Throw if exceeds.
