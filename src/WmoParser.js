@@ -89,6 +89,21 @@ export default class WmoParser {
 		return lineMatch;
 	}
 	
+	extractAll(pattern, trim = true, skipIfEmpty = true) {
+		const line = trim ? this.currentLine().trim() : this.currentLine();
+		
+		const lineMatch = [...line.matchAll(pattern)];
+		if (!lineMatch || lineMatch.length <= 0)
+			return;
+		
+		++this.#position;
+		
+		if (skipIfEmpty)
+			this.skipEmpty();
+		
+		return lineMatch;
+	}
+	
 	error(message) {
 		throw new ParseError(message, this.#position+1, this.currentLine());
 	}
