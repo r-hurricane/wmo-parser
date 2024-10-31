@@ -136,7 +136,7 @@ export class Nous42Basin {
 	
 	processOutlook(p) {
 		// If outlook is negative | 2. OUTLOOK FOR SUCCEEDING DAY.....NEGATIVE.
-		let text = p.extract(/\d+\. OUTLOOK FOR SUCCEEDING DAY(?::\s+|\.+)(.*$)/, true, false)[1];
+		let text = p.extract(/\d+\. OUTLOOK FOR SUCCEEDING DAY(?::\s+|\.+)(.*$)/)[1];
 		if (text.indexOf('NEGATIVE') >= 0) {
 			this.outlook = {
 				'negative': true,
@@ -174,7 +174,7 @@ export class Nous42Basin {
 		
 		let text = remark[1];
 		
-		// Loop until line next line is either empty OR the start of the next basin
+		// Loop until line next line is the start of the next basin
 		let nextLine = p.currentLine();
 		while (nextLine && !nextLine.match(/^\s*I+\./)) {
 			text += ' ' + p.extract(/^.*$/);

@@ -45,8 +45,9 @@ export default class WmoParser {
 	}
 	
 	currentLine() {
-		// TODO: Bounds check, return null if EOF
-		return this.#fileLines[this.#position];
+		return this.#fileLines !== null && this.#position >= 0 && this.#position < this.#fileLines.length
+			? this.#fileLines[this.#position]
+			: null;
 	}
 	
 	totalLines() {
@@ -58,8 +59,10 @@ export default class WmoParser {
 	}
 	
 	peek(count = 1) {
-		// TODO: Bounds check, return null if EOF
-		return this.#fileLines[this.#position + count];
+		const linePos = this.#position + count;
+		return this.#fileLines !== null && linePos >= 0 && linePos < this.#fileLines.length
+			? this.#fileLines[linePos]
+			: null;
 	}
 	
 	seek(count = 1) {
@@ -105,12 +108,32 @@ export default class WmoParser {
 	}
 	
 	error(message) {
-		throw new ParseError(message, this.#position+1, this.currentLine());
+		// If no line data, just throw error
+		if (this.#fileLines === null) {
+			throw new ParseError(message);
+		}
+		
+		// Otherwise, add the line context info to the output
+		let context = `${message}\n====================`;
+		
+		// Constant helpers
+		const p = this.#position;
+		const lines = this.#fileLines;
+		const padSize = (this.#position+3).toString().length;
+		
+		// Populate context
+		const ctxLines = 5;
+		for (let i = ctxLines * -1; i <= ctxLines; ++i) {
+			if (lines[p+i]?.length >= 0)
+				context += `\n${i === 0 ? '-->' : '   '} ${(p+i).toString().padStart(padSize, '0')} | ${lines[p+i]}`;
+		}
+		
+		throw new ParseError(context);
 	}
 }
 
 class ParseError extends Error {
-	constructor(message, position, lineText) {
-		super(message + `\nLine: ${position}\nLine Text: "${lineText}"`);
+	constructor(message) {
+		super(message);
 	}
 }
