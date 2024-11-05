@@ -13,6 +13,8 @@
  * Released under the MIT License.
  */
 
+import WmoParseError from './WmoParseError.js';
+
 export default class WmoParser {
 
 	#options = null;
@@ -107,12 +109,12 @@ export default class WmoParser {
 		return lineMatch;
 	}
 	
-	error(message) {
+	error(message, originalError) {
 		// If no line data, just throw error
 		if (this.#fileLines === null) {
-			throw new ParseError(message);
+			throw new WmoParseError(message, originalError);
 		}
-		
+				
 		// Otherwise, add the line context info to the output
 		let context = `${message}\n====================`;
 		
@@ -128,12 +130,6 @@ export default class WmoParser {
 				context += `\n${i === 0 ? '-->' : '   '} ${(p+i).toString().padStart(padSize, '0')} | ${lines[p+i]}`;
 		}
 		
-		throw new ParseError(context);
-	}
-}
-
-class ParseError extends Error {
-	constructor(message) {
-		super(message);
+		throw new WmoParseError(context + `\n====================`, originalError);
 	}
 }

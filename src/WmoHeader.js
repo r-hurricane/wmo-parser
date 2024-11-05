@@ -31,7 +31,6 @@ export default class WmoHeader {
 		const sequence = parser.extract(/^\s*(\d{3})\s*$/);
 		this.sequence = sequence && parseInt(sequence[1]);
 		
-		
 		// Confirm there is more lines after this
 		if (this.sequence && parser.remainingLines() <= 0)
 			parser.error('Invalid WMO message: Missing Abbreviated Heading. First line was detected as the "starting line" which is optional. Second line should then be the Abbreviated Heading as defined at https://www.weather.gov/tg/head');
@@ -39,7 +38,7 @@ export default class WmoHeader {
 		// Match the abbreviated heading line
 		const abbvHeading = parser.extract(/^(\w\w\w\w\d\d)\s+(\w\w\w\w)\s+(?:(\d\d)(\d\d)(\d\d))(?:\s+(?:(RR|CC|AA)([A-X])|P([A-Z])([A-Z])))?$/);
 		if (!abbvHeading)
-			throw new Error('Invalid WMO message: Missing Abbreviated Heading. First line ("' + parser.currentLine() + '") should be the Abbreviated Heading as defined at https://www.weather.gov/tg/head');
+			parser.error('Invalid WMO message: Missing Abbreviated Heading. First line should be the Abbreviated Heading as defined at https://www.weather.gov/tg/head');
 		
 		this.designator = abbvHeading[1];
 		this.station = abbvHeading[2];

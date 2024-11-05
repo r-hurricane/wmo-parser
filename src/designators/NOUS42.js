@@ -61,7 +61,11 @@ export class Nous42Header {
 			p.error('Expected date line, but nothing found');
 		
 		// Parse issued date
-		this.issued = new WmoDate(dateLine[0], 'hhmm a XXX EEE dd MMMM yyyy');
+		// NHC Bug? 12AM or PM seems to come in as 0 not 12, but 1 comes as 01...
+		let headerDate = dateLine[0];
+		if (headerDate[0] === '0' && headerDate[3] == ' ')
+			headerDate = '12' + headerDate.substring(1);
+		this.issued = new WmoDate(headerDate, 'hhmm a XXX EEE dd MMMM yyyy');
 		
 		// Skip subject line
 		p.extract(/^SUBJECT:/);
@@ -136,7 +140,11 @@ export class Nous42Basin {
 	
 	processOutlook(p) {
 		// If outlook is negative | 2. OUTLOOK FOR SUCCEEDING DAY.....NEGATIVE.
-		let text = p.extract(/\d+\. OUTLOOK FOR SUCCEEDING DAY(?::\s+|\.+)(.*$)/)[1];
+		let outlookLine = p.extract(/\d+\. OUTLOOK FOR SUCCEEDING DAY(?::|\.+)(.*$)/);
+		if (!outlookLine)
+			p.error('Expected basin outlook line');
+		
+		let text = outlookLine[1];
 		if (text.indexOf('NEGATIVE') >= 0) {
 			this.outlook = {
 				'negative': true,
@@ -148,9 +156,9 @@ export class Nous42Basin {
 		// Othersise, get full outlook text
 		// 2. OUTLOOK FOR SUCCEEDING DAY: CONTINUE 6-HRLY FIXES IF SYSTEM
         //    REMAINS A THREAT.
-		// Loop until line next line is either empty OR starts with \s*\d+\. (#.)
+		// Loop until line next line starts with either #+. (Remark) or I+ (Next Basin)
 		let nextLine = p.currentLine();
-		while (nextLine && !nextLine.match(/^\s*\d+\./)) {
+		while (nextLine && !nextLine.match(/^\s*(\d+|I+)\./)) {
 			text += ' ' + p.extract(/^.*$/);
 			nextLine = p.currentLine();
 		}
@@ -239,7 +247,7 @@ export class Nous42Storm {
 		const rawStormLine = p.extract(/^\s*\d+\.\s+(.+)$/);
 		
 		// Normalize storm name
-		const normSearch = rawStormLine[1].match(/^((HURRICANE|TROPICAL STORM) (.+)|SUSPECT AREA \(.+ - (.+)\))$/);
+		const normSearch = rawStormLine[1].match(/^((HURRICANE|TROPICAL STORM|TROPICAL DEPRESSION) (.+)|SUSPECT AREA \(.+ - (.+)\))$/);
 		this.name = normSearch[3] || normSearch[4];
 		
 		// Process storm and mission info
@@ -255,7 +263,7 @@ export class Nous42Storm {
 		// Group 0 - Full match line
 		// Group 1 - Flight Name
 		// Group 2 - End or optional flight separation
-		const flights = p.extractAll(/FLIGHT[^-]+-\s+(.+?)($|\s{4})/g);
+		const flights = p.extractAll(/FLIGHT[^-]+-\s+(.+?)($|\s{2})/g);
 		if (!flights)
 			p.error('Expected a Flight Name line (FLIGHT ONE - CALLSIGN 123)');
 		
@@ -268,7 +276,7 @@ export class Nous42Storm {
 		// Group 5 - Fix end optional date
 		// Group 6 - Fix end time
 		// Group 7 - Optional second flight separation
-		const requiredDates = p.extractAll(/A\. (\d+)\/(\d+)Z(,((\d+)\/)?(\d+)Z)?($|\s\s{4})/g);
+		const requiredDates = p.extractAll(/A\. (\d+)\/(\d+)Z(,((\d+)\/)?(\d+)Z)?($|\s{2})/g);
 		if (!requiredDates)
 			p.error('Expected a Flight A. Data Line');
 		
@@ -276,7 +284,7 @@ export class Nous42Storm {
 		// Group 0 - Full match of line
 		// Group 1 - Identifier text
 		// Group 2 - Optional second flight separation
-		const missionIdentifiers = p.extractAll(/B\. (.*?)($|\s\s{4})/g);
+		const missionIdentifiers = p.extractAll(/B\. (.*?)($|\s{2})/g);
 		if (!missionIdentifiers)
 			p.error('Expected a Flight B. Data Line');
 		
@@ -285,7 +293,7 @@ export class Nous42Storm {
 		// Group 1 - Departure date
 		// Group 2 - Departure time
 		// Group 3 - Optional second flight separation
-		const departures = p.extractAll(/C\. (\d{2})\/(\d{4})Z($|\s\s{4})/g);
+		const departures = p.extractAll(/C\. (\d{2})\/(\d{4})Z($|\s{2})/g);
 		if (!departures)
 			p.error('Expected a Flight C. Data Line');
 		
@@ -296,7 +304,7 @@ export class Nous42Storm {
 		// Group 3 - Longitude Number
 		// Group 4 - Longitude E or W
 		// Group 5 - Optional second flight separation
-		const coordinates = p.extractAll(/D\. (\d+\.\d+)([NS]) (\d+\.\d+)([EW])($|\s\s{4})/g);
+		const coordinates = p.extractAll(/D\. (\d+\.\d+)([NS]) (\d+\.\d+)([EW])($|\s{2})/g);
 		if (!coordinates)
 			p.error('Expected a Flight D. Data Line');
 		
@@ -307,7 +315,7 @@ export class Nous42Storm {
 		// Group 3 - Window End Date
 		// Group 4 - Window End Time
 		// Group 5 - Optional second flight separation
-		const fixWindows = p.extractAll(/E\. (\d{2})\/(\d{4})Z TO (\d{2})\/(\d{4})Z($|\s\s{4})/g);
+		const fixWindows = p.extractAll(/E\. (\d{2})\/(\d{4})Z TO (\d{2})\/(\d{4})Z($|\s{2})/g);
 		if (!fixWindows)
 			p.error('Expected a Flight E. Data Line');
 		
@@ -315,7 +323,7 @@ export class Nous42Storm {
 		// Group 0 - Full match of line
 		// Group 1 - Altitude in feet (note includes comma)
 		// Group 2 - Optional second flight separation
-		const altitudes = p.extractAll(/F\. SFC TO ([\d,]+) FT($|\s\s{4})/g);
+		const altitudes = p.extractAll(/F\. SFC TO ([\d,]+) FT($|\s{2})/g);
 		if (!altitudes)
 			p.error('Expected a Flight F. Data Line');
 		
@@ -323,7 +331,7 @@ export class Nous42Storm {
 		// Group 0 - Full match of line
 		// Group 1 - Profile text
 		// Group 2 - Optional second flight separation
-		const profiles = p.extractAll(/G\. (.*?)($|\s\s{4})/g);
+		const profiles = p.extractAll(/G\. (.*?)($|\s{2})/g);
 		if (!profiles)
 			p.error('Expected a Flight G. Data Line');
 		
@@ -332,7 +340,7 @@ export class Nous42Storm {
 		// Group 1 - Match on NO
 		// Group 2 - Match on status text
 		// Group 3 - Optional second flight separation
-		const activationStatuses = p.extractAll(/H\. (NO)?\s?(.*?)($|\s\s{4})/g);
+		const activationStatuses = p.extractAll(/H\. (NO)?\s?(.*?)($|\s{2})/g);
 		if (!activationStatuses)
 			p.error('Expected a Flight H. Data Line');
 		
@@ -340,7 +348,7 @@ export class Nous42Storm {
 		// Group 0 - Full match of line
 		// Group 1 - Remark text
 		// Group 2 - Optional second flight separation
-		const remarks = p.extractAll(/I\. (.*?)($|\s\s{4})/g);
+		const remarks = p.extractAll(/I\. (.*?)($|\s{2})/g);
 		
 		// For each flight, create a mission object
 		for (let i=0; i<flights.length; ++i) {
@@ -355,7 +363,7 @@ export class Nous42Storm {
 				altitude: altitudes[i],
 				profile: profiles[i],
 				activationStatus: activationStatuses[i],
-				remarks: remarks.lenght > i ? remarks[i] : null
+				remarks: remarks && remarks.length > i ? remarks[i] : null
 			}));
 		}
 	}
