@@ -35,8 +35,10 @@ export default class WmoFile {
 			
 			this.message = new designator(this);
 		} catch(e) {
-			if (typeof e !== WmoParseError && this.parser)
+			if (!(e instanceof WmoParseError) && this.parser)
 				this.parser.error(e.message, e);
+			else
+				throw e;
 		}
 	}
 	

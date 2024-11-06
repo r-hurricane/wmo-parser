@@ -304,7 +304,7 @@ export class Nous42Storm {
 		// Group 3 - Longitude Number
 		// Group 4 - Longitude E or W
 		// Group 5 - Optional second flight separation
-		const coordinates = p.extractAll(/D\. (\d+\.\d+)([NS]) (\d+\.\d+)([EW])($|\s{2})/g);
+		const coordinates = p.extractAll(/D\. (?:(\d+\.\d+)([NS]) (\d+\.\d+)([EW])|(NA))($|\s{2})/g);
 		if (!coordinates)
 			p.error('Expected a Flight D. Data Line');
 		
@@ -315,7 +315,7 @@ export class Nous42Storm {
 		// Group 3 - Window End Date
 		// Group 4 - Window End Time
 		// Group 5 - Optional second flight separation
-		const fixWindows = p.extractAll(/E\. (\d{2})\/(\d{4})Z TO (\d{2})\/(\d{4})Z($|\s{2})/g);
+		const fixWindows = p.extractAll(/E\. (?:(\d{2})\/(\d{4})Z TO (\d{2})\/(\d{4})Z|(NA))($|\s{2})/g);
 		if (!fixWindows)
 			p.error('Expected a Flight E. Data Line');
 		
@@ -323,7 +323,7 @@ export class Nous42Storm {
 		// Group 0 - Full match of line
 		// Group 1 - Altitude in feet (note includes comma)
 		// Group 2 - Optional second flight separation
-		const altitudes = p.extractAll(/F\. SFC TO ([\d,]+) FT($|\s{2})/g);
+		const altitudes = p.extractAll(/F\. (SFC|[\d,]+) TO ([\d,]+) FT($|\s{2})/g);
 		if (!altitudes)
 			p.error('Expected a Flight F. Data Line');
 		
@@ -416,15 +416,20 @@ export class Nous42Mission {
 		};
 		this.id = id[1];
 		this.departure = new WmoDate(`${departure[1]} ${departure[2]}Z`, 'dd HHmmX', tcpodDate);
-		this.coordinates = {
-			'lat': parseFloat(coordinates[1]) * (coordinates[2] === 'N' ? 1 : -1),
-			'lon': parseFloat(coordinates[3]) * (coordinates[4] === 'E' ? 1 : -1)
+		if (coordinates && coordinates[5] !== 'NA')
+			this.coordinates = {
+				'lat': parseFloat(coordinates[1]) * (coordinates[2] === 'N' ? 1 : -1),
+				'lon': parseFloat(coordinates[3]) * (coordinates[4] === 'E' ? 1 : -1)
+			};
+		if (fixWindow && fixWindow[5] !== 'NA')
+			this.window = {
+				'start': new WmoDate(`${fixWindow[1]} ${fixWindow[2]}Z`, 'dd HHmmX', tcpodDate),
+				'end': new WmoDate(`${fixWindow[3]} ${fixWindow[4]}Z`, 'dd HHmmX', tcpodDate)
+			};
+		this.altitude = {
+			'lower': altitude[1] === 'SFC' ? 0 : parseInt(altitude[1].replace(',', '')),
+			'upper': altitude[2] ? parseInt(altitude[2].replace(',', '')) : null
 		};
-		this.window = {
-			'start': new WmoDate(`${fixWindow[1]} ${fixWindow[2]}Z`, 'dd HHmmX', tcpodDate),
-			'end': new WmoDate(`${fixWindow[3]} ${fixWindow[4]}Z`, 'dd HHmmX', tcpodDate)
-		};
-		this.altitude = parseInt(altitude[1].replace(',', ''));
 		this.profile = profile[1];
 		this.wra = activationStatus[1] !== 'NO';
 		this.remarks = remarks;
