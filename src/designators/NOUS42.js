@@ -17,6 +17,7 @@ export default class NOUS42 extends WmoDesignator {
 	header = null;	
 	atlantic = null;
 	pacific = null;
+	note = null;
 
 	constructor(wmoFile) {
 		super(wmoFile);
@@ -29,13 +30,29 @@ export default class NOUS42 extends WmoDesignator {
 		
 		// Parse Pacific basin
 		this.pacific = new Nous42Basin(wmoFile.parser, 'II', this.header);
+		
+		// Parse potential note		
+		const noteLine = wmoFile.parser.extract(/NOTE: (.+)$/);
+		if (!noteLine)
+			return;
+		
+		// Set note text
+		this.note = noteLine[1];
+		
+		// Continue note text until literal $$
+		let nextLine = wmoFile.parser.currentLine();
+		while(nextLine && !nextLine.match(/\$\$/)) {
+			this.note += ' ' + wmoFile.parser.extract(/^.*$/);
+			nextLine = wmoFile.parser.currentLine();
+		}
 	}
 	
 	toJSON() {
 		return {
 			'header': this.header,
 			'atlantic': this.atlantic,
-			'pacific': this.pacific
+			'pacific': this.pacific,
+			'note': this.note
 		};
 	}
 }
@@ -105,8 +122,8 @@ export class Nous42Header {
 export class Nous42Basin {
 	
 	storms = [];
-	outlook = null;
-	remark = null;
+	outlook = [];
+	remarks = [];
 	canceled = [];
 	
 	constructor(p, basinId, header) {
@@ -139,58 +156,100 @@ export class Nous42Basin {
 	}
 	
 	processOutlook(p) {
-		// If outlook is negative | 2. OUTLOOK FOR SUCCEEDING DAY.....NEGATIVE.
-		let outlookLine = p.extract(/\d+\. OUTLOOK FOR SUCCEEDING DAY(?::|\.+)(.*$)/);
+		// Get outlook line
+		let outlookLine = p.extract(/\d+\. OUTLOOK FOR SUCCEEDING DAY(?::|\.+)(.*)$/);
 		if (!outlookLine)
 			p.error('Expected basin outlook line');
 		
-		let text = outlookLine[1];
+		// If outlook is negative, simply return with one outlook | 2. OUTLOOK FOR SUCCEEDING DAY.....NEGATIVE.
+		let text = outlookLine[1].trim();
 		if (text.indexOf('NEGATIVE') >= 0) {
-			this.outlook = {
+			this.outlook.push({
 				'negative': true,
 				'text': text
-			};
+			});
 			return;
 		}
 		
-		// Othersise, get full outlook text
-		// 2. OUTLOOK FOR SUCCEEDING DAY: CONTINUE 6-HRLY FIXES IF SYSTEM
-        //    REMAINS A THREAT.
-		// Loop until line next line starts with either #+. (Remark) or I+ (Next Basin)
+/*
+    2. OUTLOOK FOR SUCCEEDING DAY: CONTINUE 12-HRLY FIXES ON RAFAEL
+       WHILE SYSTEM REMAINS A THREAT.
+	   
+    3. OUTLOOK FOR SUCCEEDING DAY: 
+       A. CONTINUE 12-HRLY FIXES ON RAFAEL WHILE SYSTEM REMAINS A
+          THREAT.
+       B. BEGIN 12-HRLY FIXES ON SUSPECT AREA AT 08/1730Z IF SYSTEM
+          DEVELOPS AND REMAINS A THREAT.
+*/
+
+		// Loop until we find the next Remark (#.), Basin (II+.), NOTE, or literal $$
 		let nextLine = p.currentLine();
-		while (nextLine && !nextLine.match(/^\s*(\d+|I+)\./)) {
-			text += ' ' + p.extract(/^.*$/);
+		do {
+			// Extract the starting line
+			let multiStart = p.extract(/^\s*[A-Z]\. (.+)$/);
+			if (multiStart)
+				text = multiStart[1];
+			
+			// Loop until either the next ones metioned above OR another outlook line [A-Z].
 			nextLine = p.currentLine();
-		}
+			while (nextLine && !nextLine.match(/^\s*([A-Z]\.|\d+\.|II+\.|NOTE:|\$\$)/)) {
+				text += ' ' + p.extract(/^.*$/);
+				nextLine = p.currentLine();
+			}
 		
-		// Set outlook
-		this.outlook = {
-			'negative': false,
-			'text': text
-		};
+			// Add to the outlook list
+			this.outlook.push({
+				'negative': false,
+				'text': text
+			});
+			
+		} while (nextLine && !nextLine.match(/^\s*(\d+\.|II+\.|NOTE:|\$\$)/));
 	}
 	
 	processRemark(p, header) {
 /*
     3. REMARK: ALL REMAINING TASKING FOR SUSPECT AREA AL94 IN TCPODS
        24-138 AND 24-139 WAS CANCELED BY NHC AT 18/1330Z.
+	   
+    3. REMARKS:
+       A. THE NOAA 42 TAIL DOPPLER RADAR AND NOAA 49 SYNOPTIC
+          SURVEILLANCE MISSIONS FOR 07/1200Z TASKED IN TCPOD 24-158
+          WERE CANCELED BY NHC AT 06/1845Z AND 06/1850Z, RESPECTIVELY.
+       B. THE TEAL 74 LOW-LEVEL INVEST MISSION FOR 07/1900Z TASKED IN
+          TCPOD 24-159 WAS CANCELED BY NHC AT 07/0900Z.
 */
 		// Get the initial remark text (optional)
-		const remark = p.extract(/\d+\. REMARK: (.*)$/, true, false);
+		const remark = p.extract(/\d+\. REMARKS?:(.*)$/, true, false);
 		if (!remark)
 			return;
 		
-		let text = remark[1];
+		let text = remark[1].trim();
 		
-		// Loop until line next line is the start of the next basin
+		// Loop until we find the next Remark ([A-Z].), Basin (II+.), NOTE, or literal $$
 		let nextLine = p.currentLine();
-		while (nextLine && !nextLine.match(/^\s*I+\./)) {
-			text += ' ' + p.extract(/^.*$/);
+		do {
+			// Extract the starting line
+			let multiStart = p.extract(/^\s*[A-Z]\. (.+)$/);
+			if (multiStart)
+				text = multiStart[1];
+			
+			// Loop until either the next ones metioned above OR another outlook line [A-Z].
 			nextLine = p.currentLine();
-		}
+			while (nextLine && !nextLine.match(/^\s*([A-Z]\.|II+\.|NOTE:|\$\$)/)) {
+				text += ' ' + p.extract(/^.*$/);
+				nextLine = p.currentLine();
+			}
 		
-		// Set remark
-		this.remark = text;
+			// Add to the outlook list
+			this.remarks.push({
+				'negative': false,
+				'text': text
+			});
+			
+		} while (nextLine && !nextLine.match(/^\s*(II+\.|NOTE:|\$\$)/));
+	}
+		
+	processRemarkCancellations(text, header) {
 		
 		// Detect if remark canceled all flights for specific TCPODs
 		const call = text.match(/^ALL REMAINING TASKING .*? IN TCPODS?\s*(\d+-\d+)(?: AND (\d+-\d+))? WAS CANCELED BY .*? AT (\d+)\/(\d+)Z/i);
@@ -231,7 +290,7 @@ export class Nous42Basin {
 		return {
 			'storms': this.storms,
 			'outlook': this.outlook,
-			'remark': this.remark,
+			'remarks': this.remarks,
 			'canceled': this.canceled
 		};
 	}
@@ -247,7 +306,7 @@ export class Nous42Storm {
 		const rawStormLine = p.extract(/^\s*\d+\.\s+(.+)$/);
 		
 		// Normalize storm name
-		const normSearch = rawStormLine[1].match(/^((HURRICANE|TROPICAL STORM|TROPICAL DEPRESSION) (.+)|SUSPECT AREA \(.+ - (.+)\))$/);
+		const normSearch = rawStormLine[1].match(/^((HURRICANE|TROPICAL STORM|TROPICAL DEPRESSION) (.+)|SUSPECT AREA \((.+)\))$/);
 		this.name = normSearch[3] || normSearch[4];
 		
 		// Process storm and mission info
