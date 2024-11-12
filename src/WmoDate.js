@@ -33,12 +33,7 @@ export default class WmoDate {
 	
 	toJSON() {
 		return {
-			'yr': this.date.getUTCFullYear(),
-			'mon': this.date.getUTCMonth()+1,
-			'day': this.date.getUTCDate(),
-			'hr': this.date.getUTCHours(),
-			'min': this.date.getUTCMinutes(),
-			'sec': this.date.getUTCSeconds(),
+			'iso': this.date.toISOString(),
 			'time': this.date.getTime()
 		}
 	}

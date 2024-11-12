@@ -10,7 +10,9 @@
  */
 
 import NOUS42 from './NOUS42.js';
+import URNT15 from './URNT15.js';
 
 export default {
-	NOUS42
+	NOUS42,
+	URNT15
 };

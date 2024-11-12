@@ -30,8 +30,8 @@ export default class WmoParser {
 		};
 
 		// Ensure text is not undefined, null or empty
-		if (!wmoText)
-			throw new Error('Provided WMO Text was undefined or null.');
+		if (!wmoText || typeof wmoText !== 'string')
+			throw new Error('Provided WMO Text must be a defined, non-empty string. Received ' + (typeof wmoText) + '.');
 
 		// Ensure not empty (strip "Start of Header" if exists)
 		const trimmed = wmoText.replace('\x01', '').trim();

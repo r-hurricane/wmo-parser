@@ -3,7 +3,7 @@
  *
  * NOTE: This is not an offical NWS/WMO libary.
  *
- * Represents a WMO file.
+ * Parses the NOUS42 Tropical Cyclone Plan of thr Day.
  *
  * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
  * Released under the MIT License.
@@ -59,6 +59,7 @@ export default class NOUS42 extends WmoDesignator {
 
 export class Nous42Header {
 	
+	awips = null;
 	issued = null;
 	start = null;
 	end = null;
@@ -67,8 +68,11 @@ export class Nous42Header {
 	amendment = null;
 	
 	constructor(p) {
+		// Extract the AWIPS product type (REPRPD)		
+		const awips = p.extract(/^REPRPD$/);
+		this.awips = awips ? awips[0] : null;
+		
 		// Skip first few header lines
-		p.extract(/^REPRPD$/);
 		p.extract(/^WEATHER RECONNAISSANCE FLIGHTS$/);
 		p.extract(/NATIONAL HURRICANE CENTER/);
 		
@@ -109,6 +113,7 @@ export class Nous42Header {
 	
 	toJSON() {
 		return {
+			'awips': this.awips,
 			'issued': this.issued,
 			'start': this.start,
 			'end': this.end,
@@ -161,7 +166,7 @@ export class Nous42Basin {
 		if (!outlookLine)
 			p.error('Expected basin outlook line');
 		
-		// If outlook is negative, simply return with one outlook | 2. OUTLOOK FOR SUCCEEDING DAY.....NEGATIVE.
+		// If outlook is negative, simply return with one outlook
 		let text = outlookLine[1].trim();
 		if (text.indexOf('NEGATIVE') >= 0) {
 			this.outlook.push({
@@ -171,17 +176,6 @@ export class Nous42Basin {
 			return;
 		}
 		
-/*
-    2. OUTLOOK FOR SUCCEEDING DAY: CONTINUE 12-HRLY FIXES ON RAFAEL
-       WHILE SYSTEM REMAINS A THREAT.
-	   
-    3. OUTLOOK FOR SUCCEEDING DAY: 
-       A. CONTINUE 12-HRLY FIXES ON RAFAEL WHILE SYSTEM REMAINS A
-          THREAT.
-       B. BEGIN 12-HRLY FIXES ON SUSPECT AREA AT 08/1730Z IF SYSTEM
-          DEVELOPS AND REMAINS A THREAT.
-*/
-
 		// Loop until we find the next Remark (#.), Basin (II+.), NOTE, or literal $$
 		let nextLine = p.currentLine();
 		do {
@@ -207,17 +201,6 @@ export class Nous42Basin {
 	}
 	
 	processRemark(p, header) {
-/*
-    3. REMARK: ALL REMAINING TASKING FOR SUSPECT AREA AL94 IN TCPODS
-       24-138 AND 24-139 WAS CANCELED BY NHC AT 18/1330Z.
-	   
-    3. REMARKS:
-       A. THE NOAA 42 TAIL DOPPLER RADAR AND NOAA 49 SYNOPTIC
-          SURVEILLANCE MISSIONS FOR 07/1200Z TASKED IN TCPOD 24-158
-          WERE CANCELED BY NHC AT 06/1845Z AND 06/1850Z, RESPECTIVELY.
-       B. THE TEAL 74 LOW-LEVEL INVEST MISSION FOR 07/1900Z TASKED IN
-          TCPOD 24-159 WAS CANCELED BY NHC AT 07/0900Z.
-*/
 		// Get the initial remark text (optional)
 		const remark = p.extract(/\d+\. REMARKS?:(.*)$/, true, false);
 		if (!remark)
@@ -246,22 +229,24 @@ export class Nous42Basin {
 				'text': text
 			});
 			
+			// Process the cancellations
+			this.processRemarkCancellations(text, header);
+			
 		} while (nextLine && !nextLine.match(/^\s*(II+\.|NOTE:|\$\$)/));
 	}
 		
 	processRemarkCancellations(text, header) {
-		
 		// Detect if remark canceled all flights for specific TCPODs
-		const call = text.match(/^ALL REMAINING TASKING .*? IN TCPODS?\s*(\d+-\d+)(?: AND (\d+-\d+))? WAS CANCELED BY .*? AT (\d+)\/(\d+)Z/i);
+		const call = text.match(/^ALL REMAINING TASK(?:ING|S) .*? IN TCPODS?\s*(\d+-\d+)(?: AND (\d+-\d+))? WAS CANCELED BY .*? AT (\d+)\/(\d+)Z/i);
 		if (call) {
 			this.canceled.push({'tcpod': call[1]});
 			if (call[2] && call[2].length > 0)
 				this.canceled.push({'tcpod': call[2]});
 			return;
 		}
-		
+				
 		// Otherwise, check if a specific flight was canceled
-		const match = text.match(/THE (.*?) MISSION INTO .*?(?:\sTASKED IN TCPOD\s*((\d+)-(\d+))|\sFOR THE (\d+)\/(\d+)Z(?:,|\s+AND\s+)(?:(\d+)\/)?(\d+)Z(?: FIX)? REQUIREMENTS)+ WAS CANCELED BY .*? AT (\d+)\/(\d+)Z/i);
+		const match = text.match(/THE (.*?) MISSIONS? .*?\s(?:TCPOD\s*((\d+)-(\d+).*?)|FOR.*? (\d+)\/(\d+)Z(?:,|\s+AND\s+)(?:(\d+)\/)?(\d+)Z.*?)+ CANCELED BY .*? AT (\d+)\/(\d+)Z/i);
 		if (!match)
 			return;
 		

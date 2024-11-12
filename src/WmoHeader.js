@@ -40,8 +40,8 @@ export default class WmoHeader {
 		if (!abbvHeading)
 			parser.error('Invalid WMO message: Missing Abbreviated Heading. First line should be the Abbreviated Heading as defined at https://www.weather.gov/tg/head');
 		
-		this.designator = abbvHeading[1];
-		this.station = abbvHeading[2];
+		this.designator = abbvHeading[1].toUpperCase();
+		this.station = abbvHeading[2].toUpperCase();
 		this.datetime = new WmoDate(`${abbvHeading[3]} ${abbvHeading[4]}:${abbvHeading[5]}Z`, 'dd HH:mmX', parser.getDateContext());
 		
 		// Process Delays, Corrections, Amendments, and Segments
