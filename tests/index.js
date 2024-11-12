@@ -147,7 +147,4 @@ $$
 
 
 const parsed = parseWmo(Urnt15);
-console.log('=============================================================');
-console.log(parsed);
-console.log('=============================================================');
 console.log(JSON.stringify(parsed, null, 2));

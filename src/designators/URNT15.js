@@ -91,6 +91,7 @@ export class Urnt15Data {
 	craftPressure = null;
 	craftGeoHeight = null;
 	surfPressure = null;
+	dValue = null;
 	airTemp = null;
 	dewTemp = null;
 	windDir = null;
@@ -113,7 +114,7 @@ export class Urnt15Data {
 		// NNNNNW - Longitude Degrees + Minutes + E/W
 		// PPPP   - Aircraft static air pressure (1 dropped > 1000)
 		// GGGGG  - Aircraft geopotential height (meters)
-		// XXXX   - Extrapolated surface pressure
+		// XXXX   - Extrapolated surface pressure or D-Value
 		// sTTT   - Air temperature in degrees and tenths C
 		// sddd   - Dew point temperature
 		// wwwSSS - Wind direction + wind speed (kts) - 999 = missing
@@ -146,7 +147,10 @@ export class Urnt15Data {
 		this.craftGeoHeight = l[9][0] === '/' ? null : parseInt(l[9]);
 		
 		// Extrapolated surface pressure (1 dropped if > 1000)
-		this.surfPressure = l[10][0] === '/' ? null : parseInt((parseInt(l[10][0]) <= 3 ? '1' : '') + l[10]) / 10.0;
+		if (this.craftPressure && this.craftPressure > 550)
+			this.surfPressure = l[10][0] === '/' ? null : parseInt((parseInt(l[10][0]) <= 3 ? '1' : '') + l[10]) / 10.0;
+		else
+			this.dValue = l[10][0] === '/' ? null : parseInt(l[10]); // NOTE: 5000 is added to negative galues, but I need examples...
 		
 		// Temperatures
 		this.airTemp = l[11][0] === '/' ? null : parseInt(l[11])/10.0;
@@ -162,26 +166,39 @@ export class Urnt15Data {
 		this.sfmrRain = l[17][0] === '/' || l[17] === '999' ? null : parseInt(l[17]);
 		
 		// Quality control
-		this.posQual = parseInt(l[18]);
-		this.metQual = parseInt(l[19]);
+		const posQual = parseInt(l[18]);
+		this.posQual = {
+			'raw': posQual,
+			'pos': posQual !== 1 && posQual !== 3,
+			'pral': posQual < 2
+		};
+		
+		const metQual = parseInt(l[19]);
+		this.metQual = {
+			'raw': metQual,
+			'temp': metQual !== 1 && metQual !== 4 && metQual !== 5 && metQual !== 9,
+			'wind': metQual !== 2 && metQual !== 4 && metQual !== 6 && metQual !== 9,
+			'sfmr': metQual !== 3 && metQual < 5
+		};
 	}
 	
 	toJSON() {
 		return {
 			'time': this.time,
-			'coordinates': this.coordinates,
-			'craftPressure': this.craftPressure,
-			'craftGeoHeight': this.craftGeoHeight,
-			'surfPressure': this.surfPressure,
-			'airTemp': this.airTemp,
-			'dewTemp': this.dewTemp,
-			'windDir': this.windDir,
-			'windSpeed': this.windSpeed,
-			'maxWind': this.maxWind,
-			'sfmrWind': this.sfmrWind,
-			'sfmrRain': this.sfmrRain,
-			'posQual': this.posQual,
-			'metQual': this.metQual
+			'loc': this.coordinates,
+			'acpr': this.craftPressure,
+			'acal': this.craftGeoHeight,
+			'espr': this.surfPressure,
+			'dval': this.dValue,
+			'temp': this.airTemp,
+			'dewp': this.dewTemp,
+			'wdir': this.windDir,
+			'wspd': this.windSpeed,
+			'wmax': this.maxWind,
+			'sfmrw': this.sfmrWind,
+			'sfmrr': this.sfmrRain,
+			'pqal': this.posQual,
+			'mqal': this.metQual
 		};
 	}
 	

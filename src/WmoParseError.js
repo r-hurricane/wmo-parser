@@ -12,8 +12,6 @@
 
 export default class WmoParseError extends Error {
 	constructor(message, originalError) {
-		super(message);
-		if (originalError)
-			this.stack += `\n====================\n${originalError.stack}\n====================`;
+		super(message, originalError ? { cause: originalError } : null);
 	}
 }

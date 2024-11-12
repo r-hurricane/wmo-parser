@@ -114,7 +114,7 @@ export default class WmoParser {
 		if (this.#fileLines === null) {
 			throw new WmoParseError(message, originalError);
 		}
-				
+
 		// Otherwise, add the line context info to the output
 		let context = `${message}\n====================`;
 		
