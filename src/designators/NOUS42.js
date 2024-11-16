@@ -224,10 +224,7 @@ export class Nous42Basin {
 			}
 		
 			// Add to the outlook list
-			this.remarks.push({
-				'negative': false,
-				'text': text
-			});
+			this.remarks.push(text);
 			
 			// Process the cancellations
 			this.processRemarkCancellations(text, header);
@@ -246,12 +243,12 @@ export class Nous42Basin {
 		}
 				
 		// Otherwise, check if a specific flight was canceled
-		const match = text.match(/THE (.*?) MISSIONS? .*?\s(?:TCPOD\s*((\d+)-(\d+).*?)|FOR.*? (\d+)\/(\d+)Z(?:,|\s+AND\s+)(?:(\d+)\/)?(\d+)Z.*?)+ CANCELED BY .*? AT (\d+)\/(\d+)Z/i);
+		const match = text.match(/THE (.*?) MISSIONS? .*?\s(?=.*IN TCPOD\s*((\d+)-(\d+)))(?=.*FOR.*? (\d+)\/(\d+)Z(?:,|\s+AND\s+)(?:(\d+)\/)?(\d+)Z).*CANCELED BY .*? AT (\d+)\/(\d+)Z/i);
 		if (!match)
 			return;
 		
 		const tcpodDate = header.issued;
-		
+
 		this.canceled.push({
 			'mission': match[1],
 			'tcpod': match[2],
