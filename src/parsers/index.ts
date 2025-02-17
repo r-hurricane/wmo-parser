@@ -14,12 +14,18 @@ import {WmoFile} from "../WmoFile.js";
 
 // TODO: Dynamic import of all sub-dir + js files
 import {NOUS42} from "./no/NOUS42.js";
-import {URNT10_11} from "./ur/URNT10_11.js";
-import {URNT15} from "./ur/URNT15.js";
+import {URXX10_11} from "./ur/URXX10_11.js";
+import {URXX15} from "./ur/URXX15.js";
 
 export const messageParsers: { [key: string]: new(wmoFile: WmoFile) => WmoMessage } = {
     "NOUS42": NOUS42,
-    "URNT10": URNT10_11,
-    "URNT11": URNT10_11,
-    "URNT15": URNT15
+    "URNT10": URXX10_11,
+    "URNT11": URXX10_11,
+    "URPA10": URXX10_11,
+    "URPA11": URXX10_11,
+    "URPN10": URXX10_11,
+    "URPN11": URXX10_11,
+    "URNT15": URXX15,
+    "URPA15": URXX15,
+    "URPN15": URXX15
 };

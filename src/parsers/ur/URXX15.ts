@@ -3,7 +3,7 @@
  *
  * NOTE: This is not an official NWS/WMO library.
  *
- * Parses the raw URNT15 High-Density Observation Bulletin (HDOB) messages from aircraft recon.
+ * Parses the raw Urxx15 High-Density Observation Bulletin (HDOB) messages from aircraft recon.
  * See https://www.nhc.noaa.gov/abouthdobs_2007.shtml for details
  *
  * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
@@ -16,21 +16,21 @@ import {WmoFile} from "../../WmoFile.js";
 import {WmoMessage} from '../../WmoMessage.js';
 import {WmoParser} from "../../WmoParser.js";
 
-export class URNT15 extends WmoMessage {
+export class URXX15 extends WmoMessage {
 
-	public readonly header: Urnt15Header;
-	public readonly data: Urnt15Data[] = [];
+	public readonly header: Urxx15Header;
+	public readonly data: Urxx15Data[] = [];
 
 	public constructor(wmoFile: WmoFile) {
 		super(wmoFile);
 		
 		// Parse header
-		this.header = new Urnt15Header(wmoFile.parser);
+		this.header = new Urxx15Header(wmoFile.parser);
 		
 		// Continue data parsing until literal $$
 		let nextLine = wmoFile.parser.peek();
 		while(nextLine && !nextLine.match(/\$\$/)) {
-			this.data.push(new Urnt15Data(wmoFile.parser, this.header));
+			this.data.push(new Urxx15Data(wmoFile.parser, this.header));
 			nextLine = wmoFile.parser.peek();
 		}
 	}
@@ -43,7 +43,7 @@ export class URNT15 extends WmoMessage {
 	}
 }
 
-export class Urnt15Header implements IWmoObject {
+export class Urxx15Header implements IWmoObject {
 	
 	public readonly agency: string | null = null;
 	public readonly aircraft: string | null = null;
@@ -89,20 +89,20 @@ export class Urnt15Header implements IWmoObject {
 	}
 }
 
-export interface Urnt15PositionQuality {
+export interface Urxx15PositionQuality {
 	raw: number;
 	pos: boolean;
 	pral: boolean;
 }
 
-export interface Urnt15MetricQuality {
+export interface Urxx15MetricQuality {
 	raw:  number;
 	temp: boolean;
 	wind: boolean;
 	sfmr: boolean;
 }
 
-export class Urnt15Data implements IWmoObject {
+export class Urxx15Data implements IWmoObject {
 	
 	public readonly time: WmoDate | null = null;
 	public readonly coordinates: IWmoCoordinates | null = null;
@@ -117,10 +117,10 @@ export class Urnt15Data implements IWmoObject {
 	public readonly maxWind: number | null = null;
 	public readonly sfmrWind: number | null = null;
 	public readonly sfmrRain: number | null = null;
-	public readonly posQual: Urnt15PositionQuality | null = null;
-	public readonly metQual: Urnt15MetricQuality | null = null;
+	public readonly posQual: Urxx15PositionQuality | null = null;
+	public readonly metQual: Urxx15MetricQuality | null = null;
 	
-	public constructor(p: WmoParser, header: Urnt15Header) {
+	public constructor(p: WmoParser, header: Urxx15Header) {
 		// 0         1         2         3         4         5         6         7
 		// 01234567890123456789012345678901234567890123456789012345678901234567890
 		// -----------------------------------------------------------------------

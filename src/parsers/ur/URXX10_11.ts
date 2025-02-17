@@ -3,7 +3,7 @@
  *
  * NOTE: This is not an official NWS/WMO library.
  *
- * Parses the raw URNT10 / URNT11 Recon Observations messages.
+ * Parses the raw Urxx10 / Urxx11 Recon Observations messages.
  * Details can be found in the National Hurricane Operations Plan.
  * A link to the current version can be found on the footer of the NHC Homepage:
  * https://nhc.noaa.gov / https://www.nhc.noaa.gov/nhop.html
@@ -18,11 +18,11 @@ import {WmoFile} from "../../WmoFile.js";
 import {WmoMessage} from '../../WmoMessage.js';
 import {WmoParser} from "../../WmoParser.js";
 
-export class URNT10_11 extends WmoMessage {
+export class URXX10_11 extends WmoMessage {
 
-	public readonly observation: Urnt10_11Observation;
-	public readonly mission: Urnt10_11Mission;
-	public readonly remarks: Urnt10_11Remarks;
+	public readonly observation: Urxx10_11Observation;
+	public readonly mission: Urxx10_11Mission;
+	public readonly remarks: Urxx10_11Remarks;
 
 	public constructor(wmoFile: WmoFile) {
 		super(wmoFile);
@@ -31,17 +31,17 @@ export class URNT10_11 extends WmoMessage {
 		const p = wmoFile.parser;
 		
 		// Parse mandatory observation line
-		this.observation = new Urnt10_11Observation(p, wmoFile.header?.datetime);
+		this.observation = new Urxx10_11Observation(p, wmoFile.header?.datetime);
 
 		// Parse mission identifier
-		this.mission = new Urnt10_11Mission(p);
+		this.mission = new Urxx10_11Mission(p);
 
 		// Process remarks
-		this.remarks = new Urnt10_11Remarks(p);
+		this.remarks = new Urxx10_11Remarks(p);
 
 		// If there is still text, then throw error
 		if (p.remainingLines() > 0)
-			p.error('Expected end of URNT10/11 after a ;');
+			p.error('Expected end of Urxx10/11 after a ;');
 	}
 	
 	public override toJSON(): object {
@@ -53,7 +53,7 @@ export class URNT10_11 extends WmoMessage {
 	}
 }
 
-export class Urnt10_11Observation implements IWmoObject {
+export class Urxx10_11Observation implements IWmoObject {
 
 	public readonly radarCapability: number | null = null;
 	public readonly observationDate: WmoDate | null = null;
@@ -73,6 +73,8 @@ export class Urnt10_11Observation implements IWmoObject {
 	public readonly weatherCond: number | null = null;
 	public readonly pressureLevel: number | null = null;
 	public readonly pressureValue: number | null = null;
+	public readonly surfaceWindDir: number | null = null;
+	public readonly surfaceWindSpeed: number | null = null;
 
 	public constructor(p: WmoParser, date: WmoDate | undefined) {
 		/*
@@ -127,13 +129,15 @@ stv - surface temp value
 		this.dewPointCapability = this.asInt(dl[3]);
 
 		this.dayOfWeek = this.asInt(dl[4]);
-		this.quadrant = this.asInt(dl[5]);
+		this.quadrant = this.asInt(dl[5]) ?? 0;
 
-		// TODO: Position based on quadrant
 		if (dl[6] && dl[7]) {
+			// 0-3 - North | 5-8 - South    | Q>4 = negative lat
+			// 0+5 - 0-90W | 1+6 - 90W-180  | Q=0,1,5,6 = negative lon
+			// 2+7 180-90E | 3-8 - 90-0E    | Q=1,2,6,7 AND Q<90 = 100+ lon
 			this.coordinates = {
-				lat: (this.asInt(dl[6]) ?? 0) / 10.0,
-				lon: (this.asInt(dl[7]) ?? 0) / 10.0
+				lat: (this.asInt(dl[6]) ?? 0) / 10.0 * (this.quadrant > 4 ? -1 : 1),
+				lon: (this.asInt(dl[7]) ?? 0) / 10.0 * ([0,1,5,6].indexOf(this.quadrant) >= 0 ? -1 : 1) + (this.quadrant < 90 && [1,2,6,7].indexOf(this.quadrant) ? 100 : 0),
 			};
 		}
 
@@ -150,18 +154,19 @@ stv - surface temp value
 		this.dewPoint = this.asInt(dl[16]);
 		this.weatherCond = this.asInt(dl[17]);
 
-		// TODO: Set surface pressure if /0 vs /9
 		this.pressureLevel = this.asInt(dl[18]);
 		this.pressureValue = this.asInt(dl[19]);
 
 		// See if the next line contains the surface data (KNHC)
-		// TODO: Surface pressure
 		const sd = p.extract(/^(\d)(\d{2})(\d{2})$/);
 		if (sd) {
+			this.surfaceWindDir = this.asInt(sd[1]);
+			this.surfaceWindSpeed = this.asInt(sd[2]);
 
 		// Otherwise, if we have a 20 value, use that (KWBC)
 		} else if (dl[20]) {
-
+			this.surfaceWindDir = this.asInt(dl[21]);
+			this.surfaceWindSpeed = this.asInt(dl[22]);
 		}
 	}
 
@@ -189,11 +194,13 @@ stv - surface temp value
 			'weatherCond': this.weatherCond,
 			'psurLvl': this.pressureLevel,
 			'psurVal': this.pressureValue,
+			'surfWinDir': this.surfaceWindDir,
+			'surfWinSpd': this.surfaceWindSpeed
 		};
 	}
 }
 
-export class Urnt10_11Mission implements IWmoObject {
+export class Urxx10_11Mission implements IWmoObject {
 
 	public readonly agency: string | null = null;
 	public readonly aircraft: string | null = null;
@@ -240,7 +247,7 @@ export class Urnt10_11Mission implements IWmoObject {
 	}
 }
 
-export class Urnt10_11Remarks implements IWmoObject {
+export class Urxx10_11Remarks implements IWmoObject {
 
 	public readonly text: string | null = null;
 	public readonly sws: number | null = null;
