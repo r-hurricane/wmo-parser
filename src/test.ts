@@ -50,6 +50,8 @@ interface ITestCaseFile {
     // For each test file, parse the .txt
     const total = testFiles.size;
     let i = 0;
+    let passed = 0;
+    let failed = 0;
     console.log(`Running ${total} test cases...`);
     for (let test of testFiles) {
         if (!test[1]['.txt']) {
@@ -69,13 +71,18 @@ interface ITestCaseFile {
                     throw new Error(`Parsed JSON does not match expected test JSON.\n\nPARSED\n------\n${parsedStr}\n\nEXPECTED\n--------\n${jsonText}`);
             }
 
-            console.error(`[PASS] [${++i}/${total}] ${test[0]}`);
+            ++passed;
+            console.log(`[PASS] [${++i}/${total}] ${test[0]}`);
+
         } catch(err) {
-            if (err && err.toString().indexOf('Flight D') >= 0)
-                continue;
-            console.log(''.padStart(50, '='));
+            ++failed;
+            console.error(''.padStart(50, '='));
             console.error(`[FAIL] [${++i}/${total}] ${test[0]} - ${err}`);
-            console.log(''.padStart(50, '='));
+            console.error(''.padStart(50, '='));
         }
     }
+    console.log(''.padStart(50, '='));
+    console.log('Total : ' + total);
+    console.log('Passed: ' + passed);
+    console.log('Failed: ' + failed);
 })();

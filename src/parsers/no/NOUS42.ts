@@ -187,6 +187,9 @@ export class Nous42Basin implements IWmoObject {
         // Process outlook
         this.processOutlook(p);
 
+        // Process potential "ADDITIONAL" outlook
+        this.processOutlook(p, true);
+
         // Process optional remark
         this.processRemark(p, header);
     }
@@ -204,14 +207,17 @@ export class Nous42Basin implements IWmoObject {
         } while (nextLine && !nextLine.match(/^\s*\d+\. .*OUTLOOK/));
     }
 
-    processOutlook(p: WmoParser) {
+    processOutlook(p: WmoParser, optional: boolean = false) {
         // Get outlook line
         let outlookLine = p.extract(/\d+\. (?:(?:ADDITIONAL|SUCCEEDING) DAY OUTLOOK|OUTLOOK FOR SUCCEEDING DAY)(?::|\.+)(.*)$/);
-        if (!outlookLine || !outlookLine[1])
-            p.error('Expected basin outlook line');
+        if (!outlookLine) {
+            if (!optional)
+                p.error('Expected basin outlook line');
+            return;
+        }
 
         // If outlook is negative, simply return with one outlook
-        let text = outlookLine[1].trim();
+        let text = outlookLine[1] ? outlookLine[1].trim() : '';
         if (text.indexOf('NEGATIVE') >= 0) {
             this.outlook.push({
                 negative: true,
@@ -230,7 +236,7 @@ export class Nous42Basin implements IWmoObject {
 
             // Loop until either the next ones mentioned above OR another outlook line [A-Z].
             nextLine = p.peek();
-            while (nextLine && !nextLine.match(/^\s*([A-Z]\.|\d+\.|II+\.|NOTE:|\$\$)/)) {
+            while (nextLine && !nextLine.match(/^\s*([A-Z]\. |\d+\. |II+\. |NOTE: |\$\$)/)) {
                 text += ' ' + p.extract(/^.*$/);
                 nextLine = p.peek();
             }
@@ -241,7 +247,7 @@ export class Nous42Basin implements IWmoObject {
                 text: text
             });
 
-        } while (nextLine && !nextLine.match(/^\s*(\d+\.|II+\.|NOTE:|\$\$)/));
+        } while (nextLine && !nextLine.match(/^\s*(\d+\. |II+\. |NOTE: |\$\$)/));
     }
 
     processRemark(p: WmoParser, header: Nous42Header) {
@@ -262,7 +268,7 @@ export class Nous42Basin implements IWmoObject {
 
             // Loop until either the next ones mentioned above OR another outlook line [A-Z].
             nextLine = p.peek();
-            while (nextLine && !nextLine.match(/^\s*([A-Z]\.|II+\.|NOTE:|\$\$)/)) {
+            while (nextLine && !nextLine.match(/^\s*([A-Z]\. |II+\. |NOTE: |\$\$)/)) {
                 text += ' ' + p.extract(/^.*$/);
                 nextLine = p.peek();
             }
@@ -273,7 +279,7 @@ export class Nous42Basin implements IWmoObject {
             // Process the cancellations
             this.processRemarkCancellations(text, header);
 
-        } while (nextLine && !nextLine.match(/^\s*(II+\.|NOTE:|\$\$)/));
+        } while (nextLine && !nextLine.match(/^\s*(II+\. |NOTE: |\$\$)/));
     }
 
     processRemarkCancellations(text: string, header: Nous42Header) {
@@ -372,7 +378,7 @@ export class Nous42Storm implements IWmoObject {
         // Group 1 - Flight Name
         // Group 2 - End or optional flight separation
         const flights = p.extractAll(/FLIGHT[^-]+-\s+(.+?)($|\s{2})/g);
-        if (!flights)
+        if (!flights && !p.peek()?.match(/^\s*A\./))
             p.error('Expected a Flight Name line (FLIGHT ONE - CALLSIGN 123)');
 
         // A. Determine the required fix times (times required to be in storm)
@@ -385,7 +391,7 @@ export class Nous42Storm implements IWmoObject {
         // Group 6 - Fix end time
         // Group 7 - Optional second flight separation
         // NOTE: There appears to be some cases where there is 3 date/times. I'm not sure what the third date means
-        const requiredDates = p.extractAll(/A\. (\d+)\/(\d+)Z(,((\d+)\/)?(\d+)Z)?\S*($|\s{2})/g);
+        const requiredDates = p.extractAll(/A\. (\d+)\/(\d+)Z?(,\s*((\d+)\/)?(\d+)Z?)?\S*($|\s{2})/g);
         if (!requiredDates)
             p.error('Expected a Flight A. Data Line');
 
@@ -425,7 +431,7 @@ export class Nous42Storm implements IWmoObject {
         // Group 3 - Window End Date
         // Group 4 - Window End Time
         // Group 5 - Optional second flight separation
-        const fixWindows = p.extractAll(/E\. (?:(\d{2})\/(\d{4})Z TO (\d{2})\/(\d{4})Z|(NA))($|\s{2})/g);
+        const fixWindows = p.extractAll(/E\. (?:(\d{2})\/(\d{4})Z TO (\d{2})\/(\d{4})Z|(NA))(\s\(CORRECT(?:ED|ION)\))?($|\s{2})/g);
         if (!fixWindows)
             p.error('Expected a Flight E. Data Line');
 
@@ -433,7 +439,7 @@ export class Nous42Storm implements IWmoObject {
         // Group 0 - Full match of line
         // Group 1 - Altitude in feet (note includes comma)
         // Group 2 - Optional second flight separation
-        const altitudes = p.extractAll(/F\. (SFC|[\d,]+) TO ([\d,]+) FT($|\s{2})/g);
+        const altitudes = p.extractAll(/F\. (SFC|[\d,]+) TO ([\d,]+) FT(\s\(CORRECT(?:ED|ION)\))?($|\s{2})/g);
         if (!altitudes)
             p.error('Expected a Flight F. Data Line');
 
@@ -461,9 +467,10 @@ export class Nous42Storm implements IWmoObject {
         const remarks = p.extractAll(/I\. (.*?)($|\s{2})/g);
 
         // For each flight, create a mission object
-        for (let i=0; i<flights.length; ++i) {
+        const flightCount = flights ? flights.length : 1;
+        for (let i=0; i<flightCount; ++i) {
             this.missions.push(new Nous42Mission(header, {
-                flight: flights[i],
+                flight: flights ? flights[i] : undefined,
                 required: requiredDates[i],
                 id: missionIdentifiers[i],
                 departure: departures[i],
