@@ -64,7 +64,7 @@ function readFromStream(stream: ReadStream | NodeJS.ReadStream): Promise<string>
 
     // Determine if pretty option provided
     if (args.length >= 4 && args[3]) {
-        process.stdout.write(JSON.stringify(file, null, args[3]));
+        process.stdout.write(JSON.stringify(file, null, parseInt(args[3]) || args[3]));
         return;
     }
 

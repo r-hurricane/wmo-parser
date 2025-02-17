@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/r-hurricane/wmo-to-json.git"
+    "url": "git+https://github.com/r-hurricane/wmo-parser.git"
   },
   "keywords": [
     "National Oceanic and Atmospheric Administration",
@@ -22,8 +22,9 @@
     "National Weather Service",
     "nws",
     "National Hurricane Center",
-    "wmo",
+    "nhc",
     "World Meteorological Organization",
+    "wmo",
     "URNT10",
     "URNT11",
     "URNT15",

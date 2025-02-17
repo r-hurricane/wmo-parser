@@ -13,8 +13,8 @@ import {WmoFile} from "./WmoFile.js";
 import {WmoMessage} from "./WmoMessage.js";
 
 export interface IWmoOptions {
-    messageParser?: new(wmoFile: WmoFile) => WmoMessage;
-    dateCtx?: Date;
+    messageParser?: (new(wmoFile: WmoFile) => WmoMessage) | null | undefined;
+    dateCtx?: Date | null | undefined;
 }
 
 export interface IWmoCoordinates {
