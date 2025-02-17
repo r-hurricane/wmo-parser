@@ -147,7 +147,7 @@ export class WmoParser {
 
     public error(message: string, originalError?: Error): never {
         throw new WmoParseError(
-            this.fileLines === null ? message : message + this.getContext(),
+            this.fileLines === null ? message : `${message}\n${this.getContext()}`,
             originalError);
     }
 

@@ -21,44 +21,34 @@ import {WmoParser} from "../../WmoParser.js";
 export class URNT10_11 extends WmoMessage {
 
 	public readonly observation: Urnt10_11Observation;
-	public readonly remark: string;
-	public readonly sws: number | null = null;
-	public readonly lastReport: boolean = false;
-
+	public readonly mission: Urnt10_11Mission;
+	public readonly remarks: Urnt10_11Remarks;
 
 	public constructor(wmoFile: WmoFile) {
 		super(wmoFile);
 
-		/*
-			97779 13204 10295 56518 30500 22068 10089 /3051
-			42045
-			RMK AF305 1511A JOAQUIN OB 13
-			SWS = 41KTS
-		 */
+		// Helper parser variable
+		const p = wmoFile.parser;
 		
 		// Parse mandatory observation line
-		this.observation = new Urnt10_11Observation(wmoFile.parser, wmoFile.header?.datetime);
+		this.observation = new Urnt10_11Observation(p, wmoFile.header?.datetime);
 
-		// Parse remark
-		// TODO: Process remark values (i.e. aircraft, observation number, etc.)
-		this.remark = wmoFile.parser.assert('Expected remark line', /^RMK.*/)[0];
+		// Parse mission identifier
+		this.mission = new Urnt10_11Mission(p);
 
-		// See if the next line is the SWS SMFR surface wind measurement
-		const sws = wmoFile.parser.extract(/^SWS\s*=\s*(\d+)\s*KTS$/);
-		if (sws)
-			this.sws = sws[1] ? parseInt(sws[1]) : null;
+		// Process remarks
+		this.remarks = new Urnt10_11Remarks(p);
 
-		// See if the next line is Last Report
-		if (wmoFile.parser.extract(/^LAST REPORT$/))
-			this.lastReport = true;
+		// If there is still text, then throw error
+		if (p.remainingLines() > 0)
+			p.error('Expected end of URNT10/11 after a ;');
 	}
 	
 	public override toJSON(): object {
 		return {
-			'obs': this.observation,
-			'rmk': this.remark,
-			'sws': this.sws,
-			'last': this.lastReport
+			'observation': this.observation,
+			'mission': this.mission,
+			'remarks': this.remarks
 		};
 	}
 }
@@ -128,8 +118,8 @@ stv - surface temp value
 		 */
 		const dl = p.assert(
 			'Expected RECCO header line.',
-			/^9(222|555|777)9\s+(\d{2}\d{2})([0-7])\s+([1-7])([0-35-8])(\d{3})\s+(\d{3})(\d)([089\/])\s+(\d{3})([01\/])([01\/])\s+(\d{3})(\d{2})\s+(\d{2})(\d{2})([\d\/])\s+\/([\d\/])(\d{3})(?:\s+(\d)(\d{2})(\d{2}))?(?:\s+(\d)(\d)(\d{3}))?$/);
-		//    9   1:XXX     9    2:GGgg     3:id      4:Yday 5:Quad    6:Lat     7:Lon  8:B 9:fc        10:ha  11:dt   12:da      13:ddd 14:ff     15:TT  16:Td  17:w         18:j    19:HHH NA   20:m 21:swd 21:sws   NA 22:stm 23:v 24:stv
+			/^9(222|555|777)9\s+(\d{2}\d{2})([0-7\/])\s+([1-7\/])([0-35-8\/])([\d\/]{3})\s+([\d\/]{3})([\d\/])([089\/])\s+([\d\/]{3})([01\/])([01\/])\s+([\d\/]{3})([\d\/]{2})\s+([\d\/]{2})([\d\/]{2})([\d\/])\s+\/([\d\/])([\d\/]{3})(?:\s+([\d\/])([\d\/]{2})([\d\/]{2}))?(?:\s+([\d\/])([\d\/])([\d\/]{3}))?$/);
+		//    9   1:XXX     9    2:GGgg     3:id        4:Yday   5:Quad      6:Lat         7:Lon      8:B     9:fc        10:ha      11:dt   12:da      13:ddd     14:ff         15:TT      16:Td      17:w         18:j    19:HHH NA        20:m    21:swd     21:sws        NA   22:stm  23:v    24:stv
 		
 		this.radarCapability = dl[1] === '222' ? -1 : (dl[1] === '777' ? 1 : 0);
 		if (dl[2])
@@ -165,6 +155,7 @@ stv - surface temp value
 		this.pressureValue = this.asInt(dl[19]);
 
 		// See if the next line contains the surface data (KNHC)
+		// TODO: Surface pressure
 		const sd = p.extract(/^(\d)(\d{2})(\d{2})$/);
 		if (sd) {
 
@@ -175,7 +166,7 @@ stv - surface temp value
 	}
 
 	private asInt(strVal: string | undefined): number | null {
-		return strVal && strVal !== '/' ? parseInt(strVal) || null : null;
+		return strVal && strVal[0] !== '/' ? parseInt(strVal) || null : null;
 	}
 	
 	public toJSON(): object {
@@ -199,4 +190,128 @@ stv - surface temp value
 			'psurVal': this.pressureValue,
 		};
 	}
+}
+
+export class Urnt10_11Mission implements IWmoObject {
+
+	public readonly agency: string | null = null;
+	public readonly aircraft: string | null = null;
+	public readonly missionSeq: string | null = null;
+	public readonly stormId: string | null = null;
+	public readonly basin: string | null = null;
+	public readonly name: string | null = null;
+	public readonly obsNo: number;
+
+	public constructor(p: WmoParser) {
+		// Parse mission identifier line
+		// RMK AF305 1511A JOAQUIN OB 13
+		const idl = p.assert(
+			'Expected mission identifier line',
+			/^RMK\s+(NOAA|AF|UAS)(\w+)\s+(\d{2}|[A-Z]{2})(\d{2}|[A-Z]{2})([AECW])\s+(\w+)\s+OB\s+(\d+).*$/);
+		//          1:agency         2:acft  3:misno         4:storm     5:basin    6:name       7:seq
+
+		// Set agency and aircraft
+		this.agency = idl[1] ?? null;
+		this.aircraft = idl[2] ?? null;
+
+		// Set storm number, mission number and basin
+		this.missionSeq = idl[3] ?? null;
+		this.stormId = idl[4] ?? null;
+		this.basin = idl[5] ?? null;
+
+		// Set storm name
+		this.name = idl[6] ?? null;
+
+		// Set sequence number
+		this.obsNo = parseInt(idl[7] ?? '-1');
+	}
+
+	public toJSON(): object {
+		return {
+			'agency': this.agency,
+			'aircraft': this.aircraft,
+			'missionSeq': this.missionSeq,
+			'stormId': this.stormId,
+			'basin': this.basin,
+			'name': this.name,
+			'obsNo': this.obsNo
+		};
+	}
+}
+
+export class Urnt10_11Remarks implements IWmoObject {
+
+	public readonly text: string | null = null;
+	public readonly sws: number | null = null;
+	public readonly inbound: string | null = null;
+	public readonly outbound: string | null = null;
+	public readonly overland: boolean = false;
+	public readonly estimated: boolean = false;
+	public readonly lastReport: boolean = false;
+
+	public constructor(p: WmoParser) {
+		// Continue to loop over the file to pull out common remarks, or add the remark text
+		let l: string | undefined;
+		while(true) {
+			l = p.extract()?.at(0);
+
+			// If nothing else or a semicolon, break
+			if (!l || l === ';')
+				break;
+
+			// Add to plain-text
+			this.text = this.text
+				? `${this.text}\n${l}`
+				: l;
+
+			// See if the next line is Last Report, and break if so (expected to be last line)
+			if (l.match(/^LAST REPORT$/)) {
+				this.lastReport = true;
+
+				// Skip ; if there
+				p.extract(/;/);
+				break;
+			}
+
+			// Check for a SWS SMFR surface wind measurement
+			const sws = l.match(/^SWS\s*=\s*(\d+)\s*KTS$/);
+			if (sws) {
+				this.sws = sws[1] ? parseInt(sws[1]) : null;
+				continue;
+			}
+
+			// Check for INBOUND or OUTBOUND messages
+			const inout = l.match(/(IN|OUT)BOUND:?\s*(.*?)/)
+			if (inout) {
+				if (inout[1] === 'IN')
+					this.inbound = inout[2] ?? null;
+				else if (inout[1] === 'OUT')
+					this.outbound = inout[2] ?? null;
+				continue;
+			}
+
+			// Check for "OVERLAND"
+			if (l.match(/^OVERLAND$/)) {
+				this.overland = true;
+				continue;
+			}
+
+			// Check for "estimated area"
+			if (l.match(/ESTIMATED/) && l.match(/AREA/)) {
+				this.estimated = true;
+			}
+		}
+	}
+
+	public toJSON(): object {
+		return {
+			'sws': this.sws,
+			'in': this.inbound,
+			'out': this.outbound,
+			'overland': this.overland,
+			'estimated': this.estimated,
+			'last': this.lastReport
+		};
+	}
+
 }
