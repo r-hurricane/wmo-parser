@@ -164,7 +164,7 @@ export class WmoParser {
         const ctxLines = 5;
         for (let i = ctxLines * -1; i <= ctxLines; ++i) {
             const ctxPos = p + i;
-            if (ctxPos > 0 && ctxPos < lines.length && lines[ctxPos] !== undefined)
+            if (ctxPos >= 0 && ctxPos < lines.length && lines[ctxPos] !== undefined)
                 context += `\n${i === 0 ? '-->' : '   '} ${(p+i).toString().padStart(padSize, '0')} | ${lines[p+i]}`;
         }
 
