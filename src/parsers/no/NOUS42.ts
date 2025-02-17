@@ -362,9 +362,11 @@ export class Nous42Storm implements IWmoObject {
             p.error('Expected a storm name, but it was not found.');
 
         // Normalize storm name
-        const normSearch = rawStormLine[1].match(/^((HURRICANE|TROPICAL STORM|TROPICAL DEPRESSION) (.+)|SUSPECT AREA \((.+)\))$/);
+        const normSearch = rawStormLine[1].match(/^((HURRICANE|TROPICAL STORM|TROPICAL DEPRESSION|POTENTIAL TROPICAL CYCLONE) (.+)|SUSPECT AREA \((.+)\))$/);
         if (normSearch)
             this.name = normSearch[3] || normSearch[4] || rawStormLine[1];
+        else
+            this.name = rawStormLine[1];
 
         // Sometimes the mission may be a "non-storm" mission (training), so the storm name actually is a FLIGHT
         // In this case, we need to roll the line back
