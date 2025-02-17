@@ -1,0 +1,81 @@
+﻿/*!
+ * WMO Parser <https://github.com/r-hurricane/wmo-parser>
+ *
+ * NOTE: This is not an official NWS/WMO library.
+ *
+ * Represents a WMO header. Current WMO manual can be found here:
+ * https://library.wmo.int/records/item/35800-manual-on-the-global-telecommunication-system
+ *
+ * Another helpful page on WMO headers can be found here:
+ * https://www.weather.gov/tg/head
+ *
+ * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
+ * Released under the MIT License.
+ */
+
+import {IWmoObject} from "./WmoInterfaces.js";
+import {WmoDate} from "./WmoDate.js";
+import {WmoParser} from "./WmoParser.js";
+
+export interface IWmoHeaderSegment {
+    major?: string | null;
+    minor?: string | null;
+    last: boolean
+}
+
+export class WmoHeader implements IWmoObject {
+
+    public readonly sequence: number | undefined;
+    public readonly designator: string;
+    public readonly station: string;
+    public readonly datetime: WmoDate;
+    public readonly delay: string | undefined;
+    public readonly correction: string | undefined;
+    public readonly amendment: string | undefined;
+    public readonly segment: IWmoHeaderSegment | undefined;
+
+    public constructor(parser: WmoParser) {
+
+        // Extract the sequence number (optional)
+        const sequence = parser.extract(/^\s*(\d{3})\s*$/);
+        this.sequence = sequence && sequence[1] ? parseInt(sequence[1]) : undefined;
+
+        // Confirm there is more lines after this
+        if (this.sequence && parser.remainingLines() <= 0)
+            parser.error('Invalid WMO message: Missing Abbreviated Heading. First line was detected as the "starting line" which is optional. Second line should then be the Abbreviated Heading as defined at https://www.weather.gov/tg/head');
+
+        // Match the abbreviated heading line
+        const abbvHeading = parser.extract(/^(\w\w\w\w\d\d)\s+(\w\w\w\w)\s+(\d\d)(\d\d)(\d\d)(?:\s+(?:(RR|CC|AA)([A-X])|P([A-Z])([A-Z])))?$/);
+        if (!abbvHeading)
+            parser.error('Invalid WMO message: Missing Abbreviated Heading. First line should be the Abbreviated Heading as defined at https://www.weather.gov/tg/head');
+
+        this.designator = abbvHeading[1] ? abbvHeading[1].toUpperCase() : parser.error('Failed to parse WMO Designator from heading.');
+        this.station = abbvHeading[2] ? abbvHeading[2].toUpperCase() : parser.error('Failed to parse WMO Station from heading.');
+        this.datetime = new WmoDate(`${abbvHeading[3]} ${abbvHeading[4]}:${abbvHeading[5]}Z`, 'dd HH:mmX', parser.getDateContext());
+
+        // Process Delays, Corrections, Amendments, and Segments
+        if (abbvHeading[6]) {
+            this[abbvHeading[6] === 'RR' ? 'delay' : abbvHeading[6] === 'CC' ? 'correction' : 'amendment'] = abbvHeading[7];
+        } else if (abbvHeading[8]) {
+            this.segment = {
+                major: abbvHeading[8] ?? null,
+                minor: abbvHeading[9] ?? null,
+                last: abbvHeading[8] == 'Z'
+            };
+        }
+    }
+
+    toJSON(): object {
+        return {
+            'sequence': this.sequence ?? null,
+            'designator': this.designator ?? null,
+            'station': this.station ?? null,
+            'datetime': this.datetime ?? null,
+            'delay': this.delay ?? null,
+            'correction': this.correction ?? null,
+            'amendment': this.amendment ?? null,
+            'segment': this.segment ?? null
+        };
+    }
+
+}

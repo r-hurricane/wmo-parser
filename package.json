@@ -1,0 +1,50 @@
+{
+  "name": "@r-hurricane/wmo-parser",
+  "version": "1.0.0-alpha.1",
+  "type": "module",
+  "description": "A library that can be used to parse into usable objects or JSON World Meteorological Organization (WMO) text files published by divisions of the National Oceanic and Atmospheric Administration (NOAA), such as the National Weather Service (NWS) and the National Hurricane Center (NHC). NOTE: This is not an official WMO/NOAA/NWS/NHC library.",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "bin": {
+    "wmo2json": "./lib/bin/wmo2json.js"
+  },
+  "scripts": {
+    "build": "npx tsc -p tsconfig.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/r-hurricane/wmo-to-json.git"
+  },
+  "keywords": [
+    "National Oceanic and Atmospheric Administration",
+    "noaa",
+    "National Weather Service",
+    "nws",
+    "National Hurricane Center",
+    "wmo",
+    "World Meteorological Organization",
+    "URNT10",
+    "URNT11",
+    "URNT15",
+    "NOUS42",
+    "ABNT20"
+  ],
+  "contributors": [
+    {
+      "name": "Tyler Hadidon (Beach-Brews)",
+      "url": "https://thadidon.com"
+    }
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/r-hurricane/wmo-parser/issues"
+  },
+  "homepage": "https://github.com/r-hurricane/wmo-parser#readme",
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0"
+  }
+}
