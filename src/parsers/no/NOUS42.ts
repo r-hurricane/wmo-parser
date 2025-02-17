@@ -38,18 +38,11 @@ export class NOUS42 extends WmoMessage {
 
         // Parse potential note
         const noteLine = wmoFile.parser.extract(/NOTE: (.+)$/);
-        if (!noteLine)
+        if (!noteLine || !noteLine[1])
             return;
 
         // Set note text
-        this.note = noteLine[1] ?? null;
-
-        // Continue note text until literal $$
-        let nextLine = wmoFile.parser.peek();
-        while(nextLine && !nextLine.match(/\$\$/)) {
-            this.note += ' ' + wmoFile.parser.extract(/^.*$/);
-            nextLine = wmoFile.parser.peek();
-        }
+        this.note = noteLine[1] + wmoFile.parser.extractUntil(/\$\$/);
     }
 
     public override toJSON(): object {
@@ -82,16 +75,14 @@ export class Nous42Header implements IWmoObject {
     constructor(p: WmoParser) {
         // Extract the AWIPS product type (REPRPD)
         const awips = p.extract(/^REPRPD$/);
-        this.awips = awips && awips[0] ? awips[0] : null;
+        this.awips = awips ? awips[0] : null;
 
         // Skip first few header lines
         p.extract(/^WEATHER RECONNAISSANCE FLIGHTS$/);
         p.extract(/NATIONAL HURRICANE CENTER/);
 
         // Extract date info
-        const dateLine = p.extract();
-        if (!dateLine)
-            p.error('Expected date line, but nothing found');
+        const dateLine = p.assert('Expected date line, but nothing found');
 
         // NHC Bug? 12AM or PM seems to come in as 0 not 12, but 1 comes as 01...
         let headerDate = dateLine[0];
@@ -110,21 +101,23 @@ export class Nous42Header implements IWmoObject {
         p.extract(/^SUBJECT:/);
 
         // Extract valid dates
-        const validRange = p.extract(/VALID (\d{2})\/(\d{4}Z)(?:\s+\w+)? TO (\d{2})\/(\d{4}Z) (\w+) (\d{4})/);
-        if (!validRange)
-            p.error('Expected TCPOD valid line "VALID ##/####Z TO ##/####Z MONTHNAME 20##"');
+        const validRange = p.assert(
+            'Expected TCPOD valid line "VALID ##/####Z TO ##/####Z MONTHNAME 20##"',
+            /VALID (\d{2})\/(\d{4}Z?)(?:\s+\w+)? TO (\d{2})\/(\d{4}Z?) (\w+) (\d{4})/);
+        //   VALID 1:DAY  / 2:TIME   NA:MONTH    TO 3:DAY  / 4:TIME    5:MON 6:YEAR
 
-        // First, parse the end date, since I may need it for the start date.
+        // First, parse the end date, since it may be needed for the start date context
         this.end = new WmoDate(`${validRange[4]} ${validRange[3]} ${validRange[5]} ${validRange[6]}`, 'HHmmX dd MMMM yyyy');
 
-        // If the end date is the start of a month, use the issued date as the date context for the month
-        this.start = new WmoDate(`${validRange[2]} ${validRange[1]} ${validRange[6]}`, 'HHmmX dd yyyy',
+        // If the end date is the start of a month, use the issued date as the date context for the start date
+        this.start = new WmoDate(`${validRange[2]} ${validRange[1]}`, 'HHmmX dd',
             validRange[3] === '01' ? this.issued : this.end);
 
         // Extract TCPOD number
-        const tcpodNo = p.extract(/(WS|TC)POD NUMBER\.*((\d+)-(\d+))( CORRECTION)?( AMENDMENT)?/);
-        if (!tcpodNo)
-            p.error('Expected TCPOD NUMBER line "TCPOD NUMBER...##-###( CORRECTION| AMENDMENT)?"');
+        const tcpodNo = p.assert(
+            'Expected TCPOD NUMBER line "TCPOD NUMBER...##-###( CORRECTION| AMENDMENT)?"',
+            /(WS|TC)POD NUMBER\.*((\d+)-(\d+))( CORRECTION)?( AMENDMENT)?/);
+        //   1:TYPE POD NUMBER...2:3:YY-4:SEQ 5:CORRECTION  6:AMENDMENT
         this.tcpod = {
             full: `${tcpodNo[1]}-${tcpodNo[2]}`,
             tc: tcpodNo[1] === 'TC',
@@ -171,15 +164,17 @@ export class Nous42Basin implements IWmoObject {
 
     constructor(p: WmoParser, basinId: string, header: Nous42Header) {
         // Sometimes the Pacific basin appears to be missing completely. In this case, if the next line is the
-        // EOT ($$ literal), just return an empty basin object
+        // EOT ($$ literal) or a note, just return an empty basin object
         let nextLine = p.peek();
         if (!nextLine || nextLine === '$$' || nextLine.match(/NOTE:/))
             return;
 
         // Extract the basin name
-        const basinName = p.extract(new RegExp(`^${basinId}\\.\\s+(.*?) REQUIREMENTS(?:\\s*\\((?:NO\\s*)?CHANGE[DS]\\))?$`));
-        if (!basinName)
-            p.error(`Expected basin with ID "${basinId}".`);
+        p.assert(
+            `Expected basin with ID "${basinId}".`,
+            new RegExp(`^${basinId}\\.\\s+(.*?) REQUIREMENTS(?:\\s*\\((?:NO\\s*)?CHANGE[DS]\\))?$`));
+        //                         II. ANY TEXT REQUIREMENTS(NO CHANGES)
+        //                         II. ANY TEXT REQUIREMENTS (CHANGED)
 
         // Process storms and missions
         this.processStorms(p, header);
@@ -209,8 +204,10 @@ export class Nous42Basin implements IWmoObject {
 
     processOutlook(p: WmoParser, optional: boolean = false) {
         // Get outlook line
-        let outlookLine = p.extract(/\d+\. (?:(?:ADDITIONAL|SUCCEEDING) DAY OUTLOOK|OUTLOOK FOR SUCCEEDING DAY)(?::|\.+)(.*)$/);
+        let outlookLine = p.extract(
+            /\d+\. (?:(?:ADDITIONAL|SUCCEEDING)\s+DAY\s+OUTLOOK|OUTLOOK\s+FOR\s+SUCCEEDING\s+DAY)(?::|\.+)(.*)$/);
         if (!outlookLine) {
+            // If not optional, throw error
             if (!optional)
                 p.error('Expected basin outlook line');
             return;
@@ -234,12 +231,8 @@ export class Nous42Basin implements IWmoObject {
             if (multiStart && multiStart[1])
                 text = multiStart[1];
 
-            // Loop until either the next ones mentioned above OR another outlook line [A-Z].
-            nextLine = p.peek();
-            while (nextLine && !nextLine.match(/^\s*([A-Z]\. |\d+\. |II+\. |NOTE: |\$\$)/)) {
-                text += ' ' + p.extract(/^.*$/);
-                nextLine = p.peek();
-            }
+            // Loop until either another outlook line [A-Z] the next ones mentioned above (basin, note, etc.)
+            text = p.extractUntil(/^\s*([A-Z]\. |\d+\. |II+\. |NOTE: |\$\$)/);
 
             // Add to the outlook list
             this.outlook.push({
@@ -247,18 +240,19 @@ export class Nous42Basin implements IWmoObject {
                 text: text
             });
 
+            nextLine = p.peek();
         } while (nextLine && !nextLine.match(/^\s*(\d+\. |II+\. |NOTE: |\$\$)/));
     }
 
     processRemark(p: WmoParser, header: Nous42Header) {
         // Get the initial remark text (optional)
-        const remark = p.extract(/\d+\. REMARKS?(\s*\(CHANGED\))?:(.*)$/, true, false);
+        const remark = p.extract(/\d+\.\s+.*?REMARKS?(\s*\(CHANGED\))?:(.*)$/, true, false);
         if (!remark)
             return;
 
         let text = remark[2] ? remark[2].trim() : '';
 
-        // Loop until we find the next Remark ([A-Z].), Basin (II+.), NOTE, or literal $$
+        // Loop until we find the next Basin (II+.), NOTE, or literal $$
         let nextLine = p.peek();
         do {
             // Extract the starting line
@@ -266,12 +260,8 @@ export class Nous42Basin implements IWmoObject {
             if (multiStart && multiStart[1])
                 text = multiStart[1];
 
-            // Loop until either the next ones mentioned above OR another outlook line [A-Z].
-            nextLine = p.peek();
-            while (nextLine && !nextLine.match(/^\s*([A-Z]\. |II+\. |NOTE: |\$\$)/)) {
-                text += ' ' + p.extract(/^.*$/);
-                nextLine = p.peek();
-            }
+            // Loop until either another remark line [A-Z] OR one of the ones mentioned above
+            text = p.extractUntil(/^\s*([A-Z]\. |\d+\. |II+\. |NOTE: |\$\$)/);
 
             // Add to the outlook list
             this.remarks.push(text);
@@ -279,6 +269,7 @@ export class Nous42Basin implements IWmoObject {
             // Process the cancellations
             this.processRemarkCancellations(text, header);
 
+            nextLine = p.peek();
         } while (nextLine && !nextLine.match(/^\s*(II+\. |NOTE: |\$\$)/));
     }
 
@@ -365,11 +356,17 @@ export class Nous42Storm implements IWmoObject {
 
             // Otherwise, process as a mission
             } else {
-                this.processMissions(p, header);
+                // TODO: How to handle the WSPOD missions that have a different format?
+                if (header.tcpod.tc) {
+                    this.processMissions(p, header);
+                } else {
+                    p.extract();
+                    p.extractUntil(/^\s*(?:\d+\. |I+\. |NOTES: |\$\$)/);
+                }
             }
 
             nextLine = p.peek();
-        } while (nextLine && !nextLine.match(/^\s*\d+\./));
+            } while (nextLine && !nextLine.match(/^\s*(?:\d+\. |I+\. |NOTES: |\$\$)/));
     }
 
     processMissions(p: WmoParser, header: Nous42Header) {

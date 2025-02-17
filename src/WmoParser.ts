@@ -82,6 +82,13 @@ export class WmoParser {
         }
     }
 
+    public assert(message: string, pattern: RegExp = /^.*$/, trim: boolean = true, skipIfEmpty: boolean = true)
+        : RegExpMatchArray | never
+    {
+        const line = this.extract(pattern, trim, skipIfEmpty);
+        return line ? line : this.error(message);
+    }
+
     public extract(pattern: RegExp = /^.*$/, trim: boolean = true, skipIfEmpty: boolean = true)
         : RegExpMatchArray | undefined
     {
@@ -130,14 +137,22 @@ export class WmoParser {
         return lineMatch;
     }
 
-    public error(message: string, originalError?: Error): never {
-        // If no line data, just throw error
-        if (this.fileLines === null) {
-            throw new WmoParseError(message, originalError);
+    public extractUntil(pattern: RegExp, join: string = ' '): string {
+        let str = '';
+        for (let nl = this.peek(); nl && !nl.match(pattern); nl = this.peek()) {
+            str += this.extract() + join;
         }
+        return str.substring(0, str.length-join.length);
+    }
 
-        // Otherwise, add the line context info to the output
-        let context = `${message}\n====================`;
+    public error(message: string, originalError?: Error): never {
+        throw new WmoParseError(
+            this.fileLines === null ? message : message + this.getContext(),
+            originalError);
+    }
+
+    public getContext(): string {
+        let context = `====================`;
 
         // Constant helpers
         const p = this.position;
@@ -152,6 +167,6 @@ export class WmoParser {
                 context += `\n${i === 0 ? '-->' : '   '} ${(p+i).toString().padStart(padSize, '0')} | ${lines[p+i]}`;
         }
 
-        throw new WmoParseError(context + `\n====================`, originalError);
+        return context + `\n====================`;
     }
 }

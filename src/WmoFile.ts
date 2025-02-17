@@ -44,8 +44,11 @@ export class WmoFile implements IWmoObject {
             this.message = new messageParser(this);
 
         } catch(e) {
-            if (!(e instanceof WmoParseError) && e instanceof Error && parser)
+            if (!(e instanceof WmoParseError) && e instanceof Error && parser) {
+                // Move the context pointer back, since the error was encountered before next line was extracted
+                parser.seek(-1);
                 parser.error(e.message, e);
+            }
             throw e;
         }
     }

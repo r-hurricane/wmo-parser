@@ -32,7 +32,11 @@ export class WmoDate implements IWmoObject {
             .replace('PDT', '-07:00')
             .replace('PST', '-08:00');
 
-        this.date = dateFns.parse(dateStr, format, (dateCtx && (dateCtx instanceof WmoDate ? dateCtx.date : dateCtx)) || new Date());
+        // Normalize date context, or set to now if undefined
+        dateCtx = (dateCtx && (dateCtx instanceof WmoDate ? dateCtx.date : dateCtx)) || new Date();
+
+        // Parse date
+        this.date = dateFns.parse(dateStr, format, dateCtx);
         if (!this.date || !dateFns.isValid(this.date))
             throw new Error(`Failed to parse date "${dateStr}" to format "${format}" with context "${dateCtx}": ${this.date}`);
     }
