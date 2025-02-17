@@ -72,7 +72,7 @@ export class Urnt15Header implements IWmoObject {
 		this.obsNo = headerLine[7] ?? null;
 
 		if (headerLine[8])
-			this.date = new WmoDate(headerLine[8], 'yyyyMMdd');
+			this.date = new WmoDate(headerLine[8] + 'Z', 'yyyyMMddX');
 	}
 	
 	public toJSON(): object {
@@ -151,7 +151,7 @@ export class Urnt15Data implements IWmoObject {
 		
 		// Parse time, relative to header date
 		if (l[1])
-			this.time = new WmoDate(l[1], 'HHmmss', header.date);
+			this.time = new WmoDate(l[1] + 'Z', 'HHmmssX', header.date);
 		
 		// Coordinates are in degrees + minutes
 		this.coordinates = {

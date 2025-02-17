@@ -123,7 +123,7 @@ stv - surface temp value
 		
 		this.radarCapability = dl[1] === '222' ? -1 : (dl[1] === '777' ? 1 : 0);
 		if (dl[2])
-			this.observationDate = new WmoDate(dl[2], 'HHmm', date);
+			this.observationDate = new WmoDate(dl[2] + 'Z', 'HHmmX', date);
 		this.dewPointCapability = this.asInt(dl[3]);
 
 		this.dayOfWeek = this.asInt(dl[4]);
@@ -132,8 +132,8 @@ stv - surface temp value
 		// TODO: Position based on quadrant
 		if (dl[6] && dl[7]) {
 			this.coordinates = {
-				lat: (this.asInt(dl[6]) ?? 0) * 10,
-				lon: (this.asInt(dl[7]) ?? 0) * 10
+				lat: (this.asInt(dl[6]) ?? 0) / 10.0,
+				lon: (this.asInt(dl[7]) ?? 0) / 10.0
 			};
 		}
 
@@ -166,7 +166,7 @@ stv - surface temp value
 	}
 
 	private asInt(strVal: string | undefined): number | null {
-		return strVal && strVal[0] !== '/' ? parseInt(strVal) || null : null;
+		return strVal && strVal[0] !== '/' ? parseInt(strVal) : null;
 	}
 	
 	public toJSON(): object {
@@ -175,6 +175,7 @@ stv - surface temp value
 			'time': this.observationDate,
 			'dewCap': this.dewPointCapability,
 			'day': this.dayOfWeek,
+			'qaud': this.quadrant,
 			'pos': this.coordinates,
 			'turb': this.turbulence,
 			'flightCond': this.flightCond,
@@ -305,6 +306,7 @@ export class Urnt10_11Remarks implements IWmoObject {
 
 	public toJSON(): object {
 		return {
+			'text': this.text,
 			'sws': this.sws,
 			'in': this.inbound,
 			'out': this.outbound,
