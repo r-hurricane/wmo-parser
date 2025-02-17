@@ -357,6 +357,7 @@ export class Nous42Storm implements IWmoObject {
             // Otherwise, process as a mission
             } else {
                 // TODO: How to handle the WSPOD missions that have a different format?
+                // Temporary bypass
                 if (header.tcpod.tc) {
                     this.processMissions(p, header);
                 } else {

@@ -21,7 +21,7 @@ export class WmoDate implements IWmoObject {
 
     public readonly date: Date;
 
-    constructor(dateStr: string, format: string, dateCtx?: Date | WmoDate) {
+    constructor(dateStr: string, format: string, dateCtx?: Date | WmoDate | null) {
         // TODO: Find something better here, but there doesnt appear to be a good solution for some reason...
         dateStr = dateStr.replace('EDT', '-04:00')
             .replace('EST', '-05:00')
