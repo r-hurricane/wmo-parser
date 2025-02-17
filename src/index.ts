@@ -9,7 +9,7 @@
  * file or even other WMO files seemed too complex for a simple grammar and syntax tree. I may explore that in the
  * future, but for now this works!
  *
- * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
+ * Copyright (c) 2025, Tyler Hadidon (Beach-Brews)
  * Released under the MIT License.
  */
 

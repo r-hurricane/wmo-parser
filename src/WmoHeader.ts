@@ -9,7 +9,7 @@
  * Another helpful page on WMO headers can be found here:
  * https://www.weather.gov/tg/head
  *
- * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
+ * Copyright (c) 2025, Tyler Hadidon (Beach-Brews)
  * Released under the MIT License.
  */
 

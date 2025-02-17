@@ -6,7 +6,7 @@
  * Parses the raw Urxx15 High-Density Observation Bulletin (HDOB) messages from aircraft recon.
  * See https://www.nhc.noaa.gov/abouthdobs_2007.shtml for details
  *
- * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
+ * Copyright (c) 2025, Tyler Hadidon (Beach-Brews)
  * Released under the MIT License.
  */
 

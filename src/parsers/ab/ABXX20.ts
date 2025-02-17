@@ -5,7 +5,7 @@
  *
  * Parses the Tropical Weather Outlooks (TWO).
  *
- * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
+ * Copyright (c) 2025, Tyler Hadidon (Beach-Brews)
  * Released under the MIT License.
  */
 

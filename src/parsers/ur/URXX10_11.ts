@@ -8,7 +8,7 @@
  * A link to the current version can be found on the footer of the NHC Homepage:
  * https://nhc.noaa.gov / https://www.nhc.noaa.gov/nhop.html
  *
- * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
+ * Copyright (c) 2025, Tyler Hadidon (Beach-Brews)
  * Released under the MIT License.
  */
 

@@ -7,7 +7,7 @@
  *
  * A helper utility that parses the provided text file or stream into JSON.
  *
- * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
+ * Copyright (c) 2025, Tyler Hadidon (Beach-Brews)
  * Released under the MIT License.
  */
 

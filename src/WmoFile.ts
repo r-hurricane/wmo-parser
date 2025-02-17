@@ -6,7 +6,7 @@
  * Represents a WMO file. Current WMO manual can be found here:
  * https://library.wmo.int/records/item/35800-manual-on-the-global-telecommunication-system
  *
- * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
+ * Copyright (c) 2025, Tyler Hadidon (Beach-Brews)
  * Released under the MIT License.
  */
 

@@ -5,7 +5,7 @@
  *
  * This class simply represents a Date, but allows consistent and controllable date formatting when stringify is called.
  *
- * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
+ * Copyright (c) 2025, Tyler Hadidon (Beach-Brews)
  * Released under the MIT License.
  */
 
