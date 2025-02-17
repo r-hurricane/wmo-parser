@@ -137,10 +137,11 @@ export class WmoParser {
         return lineMatch;
     }
 
-    public extractUntil(pattern: RegExp, join: string = ' '): string {
+    public extractUntil(pattern: RegExp, join: string = ' ', trim: boolean = true, skipIfEmpty: boolean = true): string
+    {
         let str = '';
         for (let nl = this.peek(); nl && !nl.match(pattern); nl = this.peek()) {
-            str += this.extract() + join;
+            str += this.extract(/^.*$/, trim, skipIfEmpty) + join;
         }
         return str.substring(0, str.length-join.length);
     }

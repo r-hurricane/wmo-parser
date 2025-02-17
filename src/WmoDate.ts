@@ -30,7 +30,9 @@ export class WmoDate implements IWmoObject {
             .replace('MDT', '-06:00')
             .replace('MST', '-07:00')
             .replace('PDT', '-07:00')
-            .replace('PST', '-08:00');
+            .replace('PST', '-08:00')
+            .replace('HDT', '-09:00')
+            .replace('HST', '-10:00');
 
         // Normalize date context, or set to now if undefined
         dateCtx = (dateCtx && (dateCtx instanceof WmoDate ? dateCtx.date : dateCtx)) || new Date();
