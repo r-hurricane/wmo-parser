@@ -3,7 +3,9 @@
  *
  * NOTE: This is not an official NWS/WMO library.
  *
- * Parses the NOUS42 Tropical Cyclone Plan of thr Day.
+ * Parses the NOUS42 Tropical Cyclone Plan of thr Day. Details can be found in the National Hurricane Operations Plan.
+ * Current version can be found on the footer of the NHC Homepage:
+ * https://nhc.noaa.gov / https://www.nhc.noaa.gov/nhop.html
  *
  * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
  * Released under the MIT License.
@@ -17,10 +19,10 @@ import {WmoParser} from "../../WmoParser.js";
 
 export class NOUS42 extends WmoMessage {
 
-    public readonly header?: Nous42Header;
-    public readonly atlantic?: Nous42Basin;
-    public readonly pacific?: Nous42Basin;
-    public readonly note?: string | null;
+    public readonly header: Nous42Header;
+    public readonly atlantic: Nous42Basin;
+    public readonly pacific: Nous42Basin;
+    public readonly note: string | null = null;
 
     constructor(wmoFile: WmoFile) {
         super(wmoFile);
@@ -31,7 +33,7 @@ export class NOUS42 extends WmoMessage {
         // Parse Atlantic basin
         this.atlantic = new Nous42Basin(wmoFile.parser, 'I', this.header);
 
-        // Parse Pacific basin
+        // Parse Pacific basin, which may not exist
         this.pacific = new Nous42Basin(wmoFile.parser, 'II', this.header);
 
         // Parse potential note
@@ -62,24 +64,25 @@ export class NOUS42 extends WmoMessage {
 
 export interface INous42HeaderTcpod {
     full: string | null;
+    tc: boolean,
     yr: string | null;
     seq: string | null;
 }
 
 export class Nous42Header implements IWmoObject {
 
-    public readonly awips?: string | undefined;
-    public readonly issued?: WmoDate | undefined;
-    public readonly start?: WmoDate | undefined;
-    public readonly end?: WmoDate | undefined;
-    public readonly tcpod?: INous42HeaderTcpod | undefined;
-    public readonly correction?: boolean | undefined;
-    public readonly amendment?: boolean | undefined;
+    public readonly awips: string | null;
+    public readonly issued: WmoDate;
+    public readonly start: WmoDate;
+    public readonly end: WmoDate;
+    public readonly tcpod: INous42HeaderTcpod;
+    public readonly correction: boolean;
+    public readonly amendment: boolean;
 
     constructor(p: WmoParser) {
         // Extract the AWIPS product type (REPRPD)
         const awips = p.extract(/^REPRPD$/);
-        this.awips = awips && awips[0];
+        this.awips = awips && awips[0] ? awips[0] : null;
 
         // Skip first few header lines
         p.extract(/^WEATHER RECONNAISSANCE FLIGHTS$/);
@@ -90,45 +93,57 @@ export class Nous42Header implements IWmoObject {
         if (!dateLine)
             p.error('Expected date line, but nothing found');
 
-        // Parse issued date
         // NHC Bug? 12AM or PM seems to come in as 0 not 12, but 1 comes as 01...
         let headerDate = dateLine[0];
         if (headerDate[0] === '0' && headerDate[3] == ' ')
             headerDate = '12' + headerDate.substring(1);
+
+        // Date-fns limitation - Sometimes the date is 1300 PM, which date-fns doesn't like having a 24 hour + AM/PM
+        const headerHour = parseInt(headerDate.substring(0, 2)) - 12;
+        if (headerHour > 0)
+            headerDate = (headerHour < 10 ? '0' + headerHour : headerHour) + headerDate.substring(2);
+
+        // Parse issued date
         this.issued = new WmoDate(headerDate, 'hhmm a XXX EEE dd MMMM yyyy');
 
         // Skip subject line
         p.extract(/^SUBJECT:/);
 
         // Extract valid dates
-        const validRange = p.extract(/VALID (\d{2})\/(\d{4}Z) TO (\d{2})\/(\d{4}Z) (\w+) (\d{4})/);
+        const validRange = p.extract(/VALID (\d{2})\/(\d{4}Z)(?:\s+\w+)? TO (\d{2})\/(\d{4}Z) (\w+) (\d{4})/);
         if (!validRange)
             p.error('Expected TCPOD valid line "VALID ##/####Z TO ##/####Z MONTHNAME 20##"');
-        this.start = new WmoDate(`${validRange[2]} ${validRange[1]} ${validRange[5]} ${validRange[6]}`, 'HHmmX dd MMMM yyyy');
+
+        // First, parse the end date, since I may need it for the start date.
         this.end = new WmoDate(`${validRange[4]} ${validRange[3]} ${validRange[5]} ${validRange[6]}`, 'HHmmX dd MMMM yyyy');
 
+        // If the end date is the start of a month, use the issued date as the date context for the month
+        this.start = new WmoDate(`${validRange[2]} ${validRange[1]} ${validRange[6]}`, 'HHmmX dd yyyy',
+            validRange[3] === '01' ? this.issued : this.end);
+
         // Extract TCPOD number
-        const tcpodNo = p.extract(/TCPOD NUMBER\.*((\d+)-(\d+))( CORRECTION)?( AMENDMENT)?/);
+        const tcpodNo = p.extract(/(WS|TC)POD NUMBER\.*((\d+)-(\d+))( CORRECTION)?( AMENDMENT)?/);
         if (!tcpodNo)
             p.error('Expected TCPOD NUMBER line "TCPOD NUMBER...##-###( CORRECTION| AMENDMENT)?"');
         this.tcpod = {
-            full: tcpodNo[1] ?? null,
-            yr: tcpodNo[2] ?? null,
-            seq: tcpodNo[3] ?? null
+            full: `${tcpodNo[1]}-${tcpodNo[2]}`,
+            tc: tcpodNo[1] === 'TC',
+            yr: tcpodNo[3] ?? null,
+            seq: tcpodNo[4] ?? null
         };
-        this.correction = !!tcpodNo[4];
-        this.amendment = !!tcpodNo[5];
+        this.correction = !!tcpodNo[5];
+        this.amendment = !!tcpodNo[6];
     }
 
     public toJSON(): object {
         return {
-            'awips': this.awips ?? null,
-            'issued': this.issued ?? null,
-            'start': this.start ?? null,
-            'end': this.end ?? null,
-            'tcpod': this.tcpod ?? null,
-            'correction': this.correction ?? null,
-            'amendment': this.amendment ?? null
+            'awips': this.awips,
+            'issued': this.issued,
+            'start': this.start,
+            'end': this.end,
+            'tcpod': this.tcpod,
+            'correction': this.correction,
+            'amendment': this.amendment
         };
     }
 }
@@ -140,11 +155,11 @@ export interface INous42Outlook {
 
 export interface INous42Canceled {
     tcpod: string | null;
-    mission?: string | undefined;
-    tcpodYr?: string | undefined;
-    tcpodSeq?: string | undefined;
-    required?: IWmoDateRange | undefined;
-    canceledAt?: WmoDate | undefined;
+    mission?: string | null;
+    tcpodYr?: string | null;
+    tcpodSeq?: string | null;
+    required?: IWmoDateRange | null;
+    canceledAt?: WmoDate;
 }
 
 export class Nous42Basin implements IWmoObject {
@@ -155,8 +170,14 @@ export class Nous42Basin implements IWmoObject {
     public readonly canceled: INous42Canceled[] = [];
 
     constructor(p: WmoParser, basinId: string, header: Nous42Header) {
+        // Sometimes the Pacific basin appears to be missing completely. In this case, if the next line is the
+        // EOT ($$ literal), just return an empty basin object
+        let nextLine = p.peek();
+        if (!nextLine || nextLine === '$$' || nextLine.match(/NOTE:/))
+            return;
+
         // Extract the basin name
-        const basinName = p.extract(new RegExp(`^${basinId}.\\s+(.*?) REQUIREMENTS$`));
+        const basinName = p.extract(new RegExp(`^${basinId}\\.\\s+(.*?) REQUIREMENTS(?:\\s*\\((?:NO\\s*)?CHANGE[DS]\\))?$`));
         if (!basinName)
             p.error(`Expected basin with ID "${basinId}".`);
 
@@ -180,12 +201,12 @@ export class Nous42Basin implements IWmoObject {
         do {
             this.storms.push(new Nous42Storm(p, header));
             nextLine = p.peek();
-        } while (nextLine && !nextLine.match(/^\s*\d+\. OUTLOOK/));
+        } while (nextLine && !nextLine.match(/^\s*\d+\. .*OUTLOOK/));
     }
 
     processOutlook(p: WmoParser) {
         // Get outlook line
-        let outlookLine = p.extract(/\d+\. OUTLOOK FOR SUCCEEDING DAY(?::|\.+)(.*)$/);
+        let outlookLine = p.extract(/\d+\. (?:(?:ADDITIONAL|SUCCEEDING) DAY OUTLOOK|OUTLOOK FOR SUCCEEDING DAY)(?::|\.+)(.*)$/);
         if (!outlookLine || !outlookLine[1])
             p.error('Expected basin outlook line');
 
@@ -225,11 +246,11 @@ export class Nous42Basin implements IWmoObject {
 
     processRemark(p: WmoParser, header: Nous42Header) {
         // Get the initial remark text (optional)
-        const remark = p.extract(/\d+\. REMARKS?:(.*)$/, true, false);
-        if (!remark || !remark[1])
+        const remark = p.extract(/\d+\. REMARKS?(\s*\(CHANGED\))?:(.*)$/, true, false);
+        if (!remark)
             return;
 
-        let text = remark[1].trim();
+        let text = remark[2] ? remark[2].trim() : '';
 
         // Loop until we find the next Remark ([A-Z].), Basin (II+.), NOTE, or literal $$
         let nextLine = p.peek();
@@ -273,10 +294,10 @@ export class Nous42Basin implements IWmoObject {
         const tcpodDate = header.issued;
 
         this.canceled.push({
-            mission: match[1],
+            mission: match[1] ?? null,
             tcpod: match[2] ?? null,
-            tcpodYr: match[3],
-            tcpodSeq: match[4],
+            tcpodYr: match[3] ?? null,
+            tcpodSeq: match[4] ?? null,
             required: (
                 match[5]
                     ? {
@@ -285,7 +306,7 @@ export class Nous42Basin implements IWmoObject {
                             ? new WmoDate(`${match[7] || match[5]} ${match[8]}Z`, 'dd HHmmX', tcpodDate)
                             : null
                     }
-                    : undefined
+                    : null
             ),
             canceledAt: new WmoDate(`${match[9]} ${match[10]}Z`, 'dd HHmmX', tcpodDate)
         });
@@ -293,17 +314,18 @@ export class Nous42Basin implements IWmoObject {
 
     public toJSON(): object {
         return {
-            'storms': this.storms ?? null,
-            'outlook': this.outlook ?? null,
-            'remarks': this.remarks ?? null,
-            'canceled': this.canceled ?? null
+            'storms': this.storms,
+            'outlook': this.outlook,
+            'remarks': this.remarks,
+            'canceled': this.canceled,
         };
     }
 }
 
 export class Nous42Storm implements IWmoObject {
 
-    public readonly name: string;
+    public readonly name: string | null = null;
+    public readonly text: string | null = null;
     public readonly missions: Nous42Mission[] = [];
 
     constructor(p: WmoParser, header: Nous42Header) {
@@ -313,15 +335,33 @@ export class Nous42Storm implements IWmoObject {
             p.error('Expected a storm name, but it was not found.');
 
         // Normalize storm name
-        this.name = rawStormLine[1];
         const normSearch = rawStormLine[1].match(/^((HURRICANE|TROPICAL STORM|TROPICAL DEPRESSION) (.+)|SUSPECT AREA \((.+)\))$/);
         if (normSearch)
             this.name = normSearch[3] || normSearch[4] || rawStormLine[1];
 
+        // Sometimes the mission may be a "non-storm" mission (training), so the storm name actually is a FLIGHT
+        // In this case, we need to roll the line back
+        if (rawStormLine[1].match(/FLIGHT/))
+            p.seek(-1);
+
+        // If the name contains 'MISSION REQUEST' it represents a denied mission request
+        if (rawStormLine[1].match(/MISSION REQUEST/))
+            this.text = rawStormLine[0];
+
         // Process storm and mission info
         let nextLine;
         do {
-            this.processMissions(p, header);
+            // If the name matches 'MISSION REQUEST', then it represents a denied mission request
+            if (this.text) {
+                const text = p.extract();
+                if (text)
+                    this.text += ' ' + text;
+
+            // Otherwise, process as a mission
+            } else {
+                this.processMissions(p, header);
+            }
+
             nextLine = p.peek();
         } while (nextLine && !nextLine.match(/^\s*\d+\./));
     }
@@ -344,7 +384,8 @@ export class Nous42Storm implements IWmoObject {
         // Group 5 - Fix end optional date
         // Group 6 - Fix end time
         // Group 7 - Optional second flight separation
-        const requiredDates = p.extractAll(/A\. (\d+)\/(\d+)Z(,((\d+)\/)?(\d+)Z)?($|\s{2})/g);
+        // NOTE: There appears to be some cases where there is 3 date/times. I'm not sure what the third date means
+        const requiredDates = p.extractAll(/A\. (\d+)\/(\d+)Z(,((\d+)\/)?(\d+)Z)?\S*($|\s{2})/g);
         if (!requiredDates)
             p.error('Expected a Flight A. Data Line');
 
@@ -360,8 +401,9 @@ export class Nous42Storm implements IWmoObject {
         // Group 0 - Full match of line
         // Group 1 - Departure date
         // Group 2 - Departure time
-        // Group 3 - Optional second flight separation
-        const departures = p.extractAll(/C\. (\d{2})\/(\d{4})Z($|\s{2})/g);
+        // Group 3 - Optional changed flag
+        // Group 4 - Optional second flight separation
+        const departures = p.extractAll(/C\. (\d{2})\/(\d{4})Z(\s\(CHANGED\))?($|\s{2})/g);
         if (!departures)
             p.error('Expected a Flight C. Data Line');
 
@@ -437,8 +479,8 @@ export class Nous42Storm implements IWmoObject {
 
     public toJSON(): object {
         return {
-            'name': this.name ?? null,
-            'missions': this.missions ?? null
+            'name': this.name,
+            'missions': this.missions
         };
     }
 }
@@ -450,17 +492,17 @@ export interface INous42Altitude {
 
 export class Nous42Mission implements IWmoObject{
 
-    public readonly tcpod: INous42HeaderTcpod | undefined;
-    public readonly name: string | undefined;
-    public readonly required: IWmoDateRange | undefined;
-    public readonly id: string | undefined;
-    public readonly departure: WmoDate | undefined;
-    public readonly coordinates: IWmoCoordinates | undefined;
-    public readonly window: IWmoDateRange | undefined;
-    public readonly altitude: INous42Altitude | undefined;
-    public readonly profile: string | undefined;
-    public readonly wra: boolean | undefined;
-    public readonly remarks: string | undefined;
+    public readonly tcpod: INous42HeaderTcpod | null = null;
+    public readonly name: string | null = null;
+    public readonly required: IWmoDateRange | null = null;
+    public readonly id: string | null = null;
+    public readonly departure: WmoDate | null = null;
+    public readonly coordinates: IWmoCoordinates | null = null;
+    public readonly window: IWmoDateRange | null = null;
+    public readonly altitude: INous42Altitude | null = null;
+    public readonly profile: string | null = null;
+    public readonly wra: boolean = false;
+    public readonly remarks: string | null = null;
 
     constructor(header: Nous42Header, matches: {[key: string]: RegExpExecArray | undefined}) {
         const {
@@ -478,7 +520,7 @@ export class Nous42Mission implements IWmoObject{
         const tcpodDate = header.issued;
 
         this.tcpod = header.tcpod;
-        this.name = flight && flight[1];
+        this.name = flight && flight[1] ? flight[1] : null;
 
         if (required) {
             this.required = {
@@ -489,7 +531,7 @@ export class Nous42Mission implements IWmoObject{
             };
         }
 
-        this.id = id && id[1];
+        this.id = id && id[1] ? id[1] : null;
 
         if (departure)
             this.departure = new WmoDate(`${departure[1]} ${departure[2]}Z`, 'dd HHmmX', tcpodDate);
@@ -516,24 +558,24 @@ export class Nous42Mission implements IWmoObject{
             };
         }
 
-        this.profile = profile && profile[1];
-        this.wra = activationStatus && activationStatus[1] !== 'NO';
-        this.remarks = remarks && remarks[1];
+        this.profile = profile && profile[1] ? profile[1] : null;
+        this.wra = (activationStatus && activationStatus[1] !== 'NO') ?? false;
+        this.remarks = remarks && remarks[1] ? remarks[1] : null;
     }
 
     public toJSON(): object {
         return {
-            'tcpod': this.tcpod ?? null,
-            'name': this.name ?? null,
-            'required': this.required ?? null,
-            'id': this.id ?? null,
-            'departure': this.departure ?? null,
-            'coordinates': this.coordinates ?? null,
-            'window': this.window ?? null,
-            'altitude': this.altitude ?? null,
-            'profile': this.profile ?? null,
-            'wra': this.wra ?? null,
-            'remarks': this.remarks ?? null
+            'tcpod': this.tcpod,
+            'name': this.name,
+            'required': this.required,
+            'id': this.id,
+            'departure': this.departure,
+            'coordinates': this.coordinates,
+            'window': this.window,
+            'altitude': this.altitude,
+            'profile': this.profile,
+            'wra': this.wra,
+            'remarks': this.remarks
         };
     }
 }

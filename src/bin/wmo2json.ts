@@ -1,4 +1,16 @@
 ﻿#!/usr/bin/env node
+
+/*!
+ * WMO Parser <https://github.com/r-hurricane/wmo-parser>
+ *
+ * NOTE: This is not an official NWS/WMO library.
+ *
+ * A helper utility that parses the provided text file or stream into JSON.
+ *
+ * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
+ * Released under the MIT License.
+ */
+
 import {existsSync, createReadStream, ReadStream} from "node:fs";
 import {WmoFile} from '../WmoFile.js';
 
@@ -48,5 +60,5 @@ function readFromStream(stream: ReadStream | NodeJS.ReadStream): Promise<string>
         throw new Error("No input text given");
 
     // Parse and print!
-    console.log(JSON.stringify(new WmoFile(input)));
+    process.stdout.write(JSON.stringify(new WmoFile(input)));
 })();

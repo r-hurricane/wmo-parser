@@ -3,13 +3,14 @@
   "version": "1.0.0-alpha.1",
   "type": "module",
   "description": "A library that can be used to parse into usable objects or JSON World Meteorological Organization (WMO) text files published by divisions of the National Oceanic and Atmospheric Administration (NOAA), such as the National Weather Service (NWS) and the National Hurricane Center (NHC). NOTE: This is not an official WMO/NOAA/NWS/NHC library.",
-  "main": "./lib/index.js",
-  "types": "./lib/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "bin": {
-    "wmo2json": "./lib/bin/wmo2json.js"
+    "wmo2json": "./dist/bin/wmo2json.js"
   },
   "scripts": {
-    "build": "npx tsc -p tsconfig.json"
+    "build": "npx tsc -p tsconfig.json",
+    "test": " npm run build && node ./dist/test.js"
   },
   "repository": {
     "type": "git",
