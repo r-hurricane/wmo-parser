@@ -54,14 +54,14 @@ export class Urnt15Header implements IWmoObject {
 	public readonly obsNo: string | null = null;
 	public readonly date: WmoDate | null = null;
 	
-	constructor(p: WmoParser) {
+	public constructor(p: WmoParser) {
 		
 		// Extract header line
 		// NOAA2 1714A MILTON             HDOB 08 20241008
 		// 11112 33445 666666                  77 88888888
 		const headerLine = p.assert(
-			'Expected header line.',
-			/^\s*(\w+)(\d+)\s+(W[A-Z]|\d{2})(\d{2})([AECW])\s+(\w+?)\s+HDOB\s+(\d{2})\s+(\d{8})\s*$/);
+			'Expected HDOB header line.',
+			/^\s*(\w+)(\d+)\s+(W[A-Z]|\d{2})(\d{2}|[A-Z]{2})([AECW])\s+(\w+?)\s+HDOB\s+(\d{2})\s+(\d{8})\s*$/);
 		
 		this.agency = headerLine[1] ?? null;
 		this.aircraft = headerLine[2] ?? null;
@@ -120,7 +120,7 @@ export class Urnt15Data implements IWmoObject {
 	public readonly posQual: Urnt15PositionQuality | null = null;
 	public readonly metQual: Urnt15MetricQuality | null = null;
 	
-	constructor(p: WmoParser, header: Urnt15Header) {
+	public constructor(p: WmoParser, header: Urnt15Header) {
 		// 0         1         2         3         4         5         6         7
 		// 01234567890123456789012345678901234567890123456789012345678901234567890
 		// -----------------------------------------------------------------------

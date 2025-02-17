@@ -4,7 +4,7 @@
  * NOTE: This is not an official NWS/WMO library.
  *
  * Parses the NOUS42 Tropical Cyclone Plan of thr Day. Details can be found in the National Hurricane Operations Plan.
- * Current version can be found on the footer of the NHC Homepage:
+ * A link to the current version can be found on the footer of the NHC Homepage:
  * https://nhc.noaa.gov / https://www.nhc.noaa.gov/nhop.html
  *
  * Copyright (c) 2024, Tyler Hadidon (Beach-Brews)
