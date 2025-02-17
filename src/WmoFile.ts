@@ -11,17 +11,22 @@
  */
 
 import {IWmoObject, IWmoOptions} from "./WmoInterfaces.js";
-import {WmoHeader} from "./WmoHeader.js";
-import {WmoMessage} from "./WmoMessage.js";
+import {IWmoHeader, WmoHeader} from "./WmoHeader.js";
+import {IWmoMessage, WmoMessage} from "./WmoMessage.js";
 import {messageParsers} from "./parsers/index.js";
 import {WmoParseError} from "./WmoParseError.js";
 import {WmoParser} from "./WmoParser.js";
 
+export interface IWmoFile {
+    header: IWmoHeader;
+    message: IWmoMessage;
+}
+
 export class WmoFile implements IWmoObject {
 
     public readonly parser: WmoParser;
-    public readonly header?: WmoHeader;
-    public readonly message?: WmoMessage;
+    public readonly header: WmoHeader;
+    public readonly message: WmoMessage;
 
     constructor(wmoText: string, options?: IWmoOptions) {
         let parser: WmoParser | undefined;
@@ -53,10 +58,10 @@ export class WmoFile implements IWmoObject {
         }
     }
 
-    toJSON(): object {
+    toJSON(): IWmoFile {
         return {
-            'header': this.header ?? null,
-            'message': this.message ?? null
+            header: this.header.toJSON(),
+            message: this.message.toJSON()
         }
     }
 

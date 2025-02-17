@@ -13,10 +13,16 @@
  */
 
 import {IWmoCoordinates, IWmoObject} from "../../WmoInterfaces.js";
-import {WmoDate} from '../../WmoDate.js';
+import {IWmoDate, WmoDate} from '../../WmoDate.js';
 import {WmoFile} from "../../WmoFile.js";
-import {WmoMessage} from '../../WmoMessage.js';
+import {IWmoMessage, WmoMessage} from '../../WmoMessage.js';
 import {WmoParser} from "../../WmoParser.js";
+
+export interface IUrxx10_11 extends IWmoMessage {
+	observation: IUrxx10_11Observation;
+	mission: IUrxx10_11Mission;
+	remarks: IUrxx10_11Remarks;
+}
 
 export class URXX10_11 extends WmoMessage {
 
@@ -44,13 +50,36 @@ export class URXX10_11 extends WmoMessage {
 			p.error('Expected end of Urxx10/11 after a ;');
 	}
 	
-	public override toJSON(): object {
+	public override toJSON(): IUrxx10_11 {
 		return {
-			'observation': this.observation,
-			'mission': this.mission,
-			'remarks': this.remarks
+			observation: this.observation.toJSON(),
+			mission: this.mission.toJSON(),
+			remarks: this.remarks.toJSON()
 		};
 	}
+}
+
+export interface IUrxx10_11Observation {
+	radar: number | null;
+	time: IWmoDate | null;
+	dewCap: number | null;
+	day: number | null;
+	qaud: number | null;
+	pos: IWmoCoordinates | null;
+	turb: number | null;
+	flightCond: number | null;
+	alt: number | null;
+	windType: number | null;
+	windMethod: number | null;
+	windDir: number | null;
+	windSpeed: number | null;
+	temp: number | null;
+	dew: number | null;
+	weatherCond: number | null;
+	psurLvl: number | null;
+	psurVal: number | null;
+	surfWinDir: number | null;
+	surfWinSpd: number | null;
 }
 
 export class Urxx10_11Observation implements IWmoObject {
@@ -174,30 +203,40 @@ stv - surface temp value
 		return strVal && strVal[0] !== '/' ? parseInt(strVal) : null;
 	}
 	
-	public toJSON(): object {
+	public toJSON(): IUrxx10_11Observation {
 		return {
-			'radar': this.radarCapability,
-			'time': this.observationDate,
-			'dewCap': this.dewPointCapability,
-			'day': this.dayOfWeek,
-			'qaud': this.quadrant,
-			'pos': this.coordinates,
-			'turb': this.turbulence,
-			'flightCond': this.flightCond,
-			'alt': this.altitude,
-			'windType': this.windType,
-			'windMethod': this.windMethod,
-			'windDir': this.windDir,
-			'windSpeed': this.windSpeed,
-			'temp': this.temperature,
-			'dew': this.dewPoint,
-			'weatherCond': this.weatherCond,
-			'psurLvl': this.pressureLevel,
-			'psurVal': this.pressureValue,
-			'surfWinDir': this.surfaceWindDir,
-			'surfWinSpd': this.surfaceWindSpeed
+			radar: this.radarCapability,
+			time: this.observationDate?.toJSON() ?? null,
+			dewCap: this.dewPointCapability,
+			day: this.dayOfWeek,
+			qaud: this.quadrant,
+			pos: this.coordinates,
+			turb: this.turbulence,
+			flightCond: this.flightCond,
+			alt: this.altitude,
+			windType: this.windType,
+			windMethod: this.windMethod,
+			windDir: this.windDir,
+			windSpeed: this.windSpeed,
+			temp: this.temperature,
+			dew: this.dewPoint,
+			weatherCond: this.weatherCond,
+			psurLvl: this.pressureLevel,
+			psurVal: this.pressureValue,
+			surfWinDir: this.surfaceWindDir,
+			surfWinSpd: this.surfaceWindSpeed
 		};
 	}
+}
+
+export interface IUrxx10_11Mission {
+	agency: string | null;
+	aircraft: string | null;
+	missionSeq: string | null;
+	stormId: string | null;
+	basin: string | null;
+	name: string | null;
+	obsNo: number | null;
 }
 
 export class Urxx10_11Mission implements IWmoObject {
@@ -234,17 +273,27 @@ export class Urxx10_11Mission implements IWmoObject {
 		this.obsNo = parseInt(idl[7] ?? '-1');
 	}
 
-	public toJSON(): object {
+	public toJSON(): IUrxx10_11Mission {
 		return {
-			'agency': this.agency,
-			'aircraft': this.aircraft,
-			'missionSeq': this.missionSeq,
-			'stormId': this.stormId,
-			'basin': this.basin,
-			'name': this.name,
-			'obsNo': this.obsNo
+			agency: this.agency,
+			aircraft: this.aircraft,
+			missionSeq: this.missionSeq,
+			stormId: this.stormId,
+			basin: this.basin,
+			name: this.name,
+			obsNo: this.obsNo
 		};
 	}
+}
+
+export interface IUrxx10_11Remarks {
+	text: string | null;
+	sws: number | null;
+	in: string | null;
+	out: string | null;
+	overland: boolean | null;
+	estimated: boolean | null;
+	last: boolean | null;
 }
 
 export class Urxx10_11Remarks implements IWmoObject {
@@ -311,15 +360,15 @@ export class Urxx10_11Remarks implements IWmoObject {
 		}
 	}
 
-	public toJSON(): object {
+	public toJSON(): IUrxx10_11Remarks {
 		return {
-			'text': this.text,
-			'sws': this.sws,
-			'in': this.inbound,
-			'out': this.outbound,
-			'overland': this.overland,
-			'estimated': this.estimated,
-			'last': this.lastReport
+			text: this.text,
+			sws: this.sws,
+			in: this.inbound,
+			out: this.outbound,
+			overland: this.overland,
+			estimated: this.estimated,
+			last: this.lastReport
 		};
 	}
 

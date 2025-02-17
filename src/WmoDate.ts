@@ -13,8 +13,13 @@ import * as dateFns from 'date-fns';
 import {IWmoObject} from "./WmoInterfaces.js";
 
 export interface IWmoDateRange {
-    start: WmoDate | null,
-    end: WmoDate | null
+    start: WmoDate | null;
+    end: WmoDate | null;
+}
+
+export interface IWmoDate {
+    iso: string;
+    time: number;
 }
 
 export class WmoDate implements IWmoObject {
@@ -43,10 +48,10 @@ export class WmoDate implements IWmoObject {
             throw new Error(`Failed to parse date "${dateStr}" to format "${format}" with context "${dateCtx}": ${this.date}`);
     }
 
-    toJSON() {
+    toJSON(): IWmoDate {
         return {
-            'iso': this.date.toISOString(),
-            'time': this.date.getTime()
+            iso: this.date.toISOString(),
+            time: this.date.getTime()
         }
     }
 

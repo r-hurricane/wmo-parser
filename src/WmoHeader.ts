@@ -14,13 +14,24 @@
  */
 
 import {IWmoObject} from "./WmoInterfaces.js";
-import {WmoDate} from "./WmoDate.js";
+import {IWmoDate, WmoDate} from "./WmoDate.js";
 import {WmoParser} from "./WmoParser.js";
 
 export interface IWmoHeaderSegment {
     major: string | null;
     minor: string | null;
-    last: boolean
+    last: boolean;
+}
+
+export interface IWmoHeader {
+    sequence: number | null;
+    designator: string | null;
+    station: string | null;
+    datetime: IWmoDate | null;
+    delay: string | null;
+    correction: string | null;
+    amendment: string | null;
+    segment: IWmoHeaderSegment | null;
 }
 
 export class WmoHeader implements IWmoObject {
@@ -65,16 +76,16 @@ export class WmoHeader implements IWmoObject {
         }
     }
 
-    toJSON(): object {
+    toJSON(): IWmoHeader {
         return {
-            'sequence': this.sequence ?? null,
-            'designator': this.designator ?? null,
-            'station': this.station ?? null,
-            'datetime': this.datetime ?? null,
-            'delay': this.delay ?? null,
-            'correction': this.correction ?? null,
-            'amendment': this.amendment ?? null,
-            'segment': this.segment ?? null
+            sequence: this.sequence ?? null,
+            designator: this.designator ?? null,
+            station: this.station ?? null,
+            datetime: this.datetime.toJSON() ?? null,
+            delay: this.delay ?? null,
+            correction: this.correction ?? null,
+            amendment: this.amendment ?? null,
+            segment: this.segment ?? null
         };
     }
 

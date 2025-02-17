@@ -11,10 +11,15 @@
  */
 
 import {IWmoCoordinates, IWmoObject} from "../../WmoInterfaces.js";
-import {WmoDate} from '../../WmoDate.js';
+import {IWmoDate, WmoDate} from '../../WmoDate.js';
 import {WmoFile} from "../../WmoFile.js";
-import {WmoMessage} from '../../WmoMessage.js';
+import {IWmoMessage, WmoMessage} from '../../WmoMessage.js';
 import {WmoParser} from "../../WmoParser.js";
+
+export interface IUrxx15 extends IWmoMessage {
+	header: IUrxx15Header;
+	data: IUrxx15Data[];
+}
 
 export class URXX15 extends WmoMessage {
 
@@ -35,12 +40,23 @@ export class URXX15 extends WmoMessage {
 		}
 	}
 	
-	public override toJSON(): object {
+	public override toJSON(): IUrxx15 {
 		return {
-			'header': this.header,
-			'data': this.data
+			header: this.header.toJSON(),
+			data: this.data.map(d => d.toJSON())
 		};
 	}
+}
+
+export interface IUrxx15Header {
+	agency: string | null;
+	aircraft: string | null;
+	missionNo: string | null;
+	stormNo: string | null;
+	location: string | null;
+	stormName: string | null;
+	obsNo: string | null;
+	date: IWmoDate | null;
 }
 
 export class Urxx15Header implements IWmoObject {
@@ -75,31 +91,49 @@ export class Urxx15Header implements IWmoObject {
 			this.date = new WmoDate(headerLine[8] + 'Z', 'yyyyMMddX');
 	}
 	
-	public toJSON(): object {
+	public toJSON(): IUrxx15Header {
 		return {
-			'agency': this.agency,
-			'aircraft': this.aircraft,
-			'missionNo': this.missionNo,
-			'stormNo': this.stormNo,
-			'location': this.location,
-			'stormName': this.stormName,
-			'obsNo': this.obsNo,
-			'date': this.date
+			agency: this.agency,
+			aircraft: this.aircraft,
+			missionNo: this.missionNo,
+			stormNo: this.stormNo,
+			location: this.location,
+			stormName: this.stormName,
+			obsNo: this.obsNo,
+			date: this.date?.toJSON() ?? null
 		};
 	}
 }
 
-export interface Urxx15PositionQuality {
+export interface IUrxx15PositionQuality {
 	raw: number;
 	pos: boolean;
 	pral: boolean;
 }
 
-export interface Urxx15MetricQuality {
+export interface IUrxx15MetricQuality {
 	raw:  number;
 	temp: boolean;
 	wind: boolean;
 	sfmr: boolean;
+}
+
+export interface IUrxx15Data {
+	time: IWmoDate | null;
+	loc: IWmoCoordinates | null;
+	acpr: number | null;
+	acal: number | null;
+	espr: number | null;
+	dval: number | null;
+	temp: number | null;
+	dewp: number | null;
+	wdir: number | null;
+	wspd: number | null;
+	wmax: number | null;
+	sfmrw: number | null;
+	sfmrr: number | null;
+	pqal: IUrxx15PositionQuality | null;
+	mqal: IUrxx15MetricQuality | null;
 }
 
 export class Urxx15Data implements IWmoObject {
@@ -117,8 +151,8 @@ export class Urxx15Data implements IWmoObject {
 	public readonly maxWind: number | null = null;
 	public readonly sfmrWind: number | null = null;
 	public readonly sfmrRain: number | null = null;
-	public readonly posQual: Urxx15PositionQuality | null = null;
-	public readonly metQual: Urxx15MetricQuality | null = null;
+	public readonly posQual: IUrxx15PositionQuality | null = null;
+	public readonly metQual: IUrxx15MetricQuality | null = null;
 	
 	public constructor(p: WmoParser, header: Urxx15Header) {
 		// 0         1         2         3         4         5         6         7
@@ -205,23 +239,23 @@ export class Urxx15Data implements IWmoObject {
 		}
 	}
 	
-	public toJSON(): object {
+	public toJSON(): IUrxx15Data {
 		return {
-			'time': this.time,
-			'loc': this.coordinates,
-			'acpr': this.craftPressure,
-			'acal': this.craftGeoHeight,
-			'espr': this.surfPressure,
-			'dval': this.dValue,
-			'temp': this.airTemp,
-			'dewp': this.dewTemp,
-			'wdir': this.windDir,
-			'wspd': this.windSpeed,
-			'wmax': this.maxWind,
-			'sfmrw': this.sfmrWind,
-			'sfmrr': this.sfmrRain,
-			'pqal': this.posQual,
-			'mqal': this.metQual
+			time: this.time?.toJSON() ?? null,
+			loc: this.coordinates,
+			acpr: this.craftPressure,
+			acal: this.craftGeoHeight,
+			espr: this.surfPressure,
+			dval: this.dValue,
+			temp: this.airTemp,
+			dewp: this.dewTemp,
+			wdir: this.windDir,
+			wspd: this.windSpeed,
+			wmax: this.maxWind,
+			sfmrw: this.sfmrWind,
+			sfmrr: this.sfmrRain,
+			pqal: this.posQual,
+			mqal: this.metQual
 		};
 	}
 	

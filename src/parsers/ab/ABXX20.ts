@@ -10,10 +10,19 @@
  */
 
 import {IWmoObject} from "../../WmoInterfaces.js";
-import {WmoDate} from '../../WmoDate.js';
+import {IWmoDate, WmoDate} from '../../WmoDate.js';
 import {WmoFile} from "../../WmoFile.js";
-import {WmoMessage} from '../../WmoMessage.js';
+import {IWmoMessage, WmoMessage} from '../../WmoMessage.js';
 import {WmoParser} from "../../WmoParser.js";
+
+export interface IAbxx20 extends IWmoMessage {
+	issuedBy: string;
+	issuedOn: IWmoDate | null;
+	for: string;
+	active: string | null;
+	areas: IAbxx20AreaOfInterest[];
+	remark: string | null;
+}
 
 export class ABXX20 extends WmoMessage {
 
@@ -21,7 +30,7 @@ export class ABXX20 extends WmoMessage {
 	public readonly issuedOn: WmoDate;
 	public readonly for: string;
 	public readonly active: string | null = null;
-	public readonly areasOfInterest: AbxxAreaOfInterest[] = [];
+	public readonly areasOfInterest: Abxx20AreaOfInterest[] = [];
 	public readonly remark: string | null = null;
 
 	public constructor(wmoFile: WmoFile) {
@@ -53,7 +62,7 @@ export class ABXX20 extends WmoMessage {
 		// Extract storms
 		let next = p.peek();
 		while(next && next.match(/^\s*\d+\..*$/)) {
-			this.areasOfInterest.push(new AbxxAreaOfInterest(p));
+			this.areasOfInterest.push(new Abxx20AreaOfInterest(p));
 			next = p.peek();
 		}
 
@@ -61,14 +70,14 @@ export class ABXX20 extends WmoMessage {
 		this.remark = p.extractUntil(/\$\$/);
 	}
 	
-	public override toJSON(): object {
+	public override toJSON(): IAbxx20 {
 		return {
-			'issuedBy': this.issuedBy,
-			'issuedOn': this.issuedOn,
-			'for': this.for,
-			'active': this.active,
-			'areas': this.areasOfInterest,
-			'remark': this.remark
+			issuedBy: this.issuedBy,
+			issuedOn: this.issuedOn.toJSON(),
+			for: this.for,
+			active: this.active,
+			areas: this.areasOfInterest.map(a => a.toJSON()),
+			remark: this.remark
 		};
 	}
 }
@@ -78,7 +87,15 @@ export interface IFormationChance {
 	chance: number
 }
 
-export class AbxxAreaOfInterest implements IWmoObject {
+export interface IAbxx20AreaOfInterest {
+	title: string | null;
+	id: string | null;
+	text: string | null;
+	twoDay: IFormationChance | null;
+	sevenDay: IFormationChance | null;
+}
+
+export class Abxx20AreaOfInterest implements IWmoObject {
 	
 	public readonly title: string | null = null;
 	public readonly id: string | null = null;
@@ -114,13 +131,13 @@ export class AbxxAreaOfInterest implements IWmoObject {
 		};
 	}
 	
-	public toJSON(): object {
+	public toJSON(): IAbxx20AreaOfInterest {
 		return {
-			'title': this.title,
-			'id': this.id,
-			'text': this.text,
-			'twoDay': this.twoDay,
-			'sevenDay': this.sevenDay
+			title: this.title,
+			id: this.id,
+			text: this.text,
+			twoDay: this.twoDay,
+			sevenDay: this.sevenDay
 		};
 	}
 }

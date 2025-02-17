@@ -12,10 +12,17 @@
  */
 
 import {IWmoCoordinates, IWmoObject} from "../../WmoInterfaces.js";
-import {IWmoDateRange, WmoDate} from '../../WmoDate.js';
+import {IWmoDate, IWmoDateRange, WmoDate} from '../../WmoDate.js';
 import {WmoFile} from "../../WmoFile.js";
-import {WmoMessage} from '../../WmoMessage.js';
+import {IWmoMessage, WmoMessage} from '../../WmoMessage.js';
 import {WmoParser} from "../../WmoParser.js";
+
+export interface INous42 extends IWmoMessage {
+    header: INous42Header | null;
+    atlantic: INous42Basin | null;
+    pacific: INous42Basin | null;
+    note: string | null;
+}
 
 export class NOUS42 extends WmoMessage {
 
@@ -45,12 +52,12 @@ export class NOUS42 extends WmoMessage {
         this.note = noteLine[1] + wmoFile.parser.extractUntil(/\$\$/);
     }
 
-    public override toJSON(): object {
+    public override toJSON(): INous42 {
         return {
-            'header': this.header,
-            'atlantic': this.atlantic,
-            'pacific': this.pacific,
-            'note': this.note
+            header: this.header.toJSON(),
+            atlantic: this.atlantic.toJSON(),
+            pacific: this.pacific.toJSON(),
+            note: this.note
         };
     }
 }
@@ -60,6 +67,16 @@ export interface INous42HeaderTcpod {
     tc: boolean,
     yr: string | null;
     seq: string | null;
+}
+
+export interface INous42Header {
+    awips: string | null;
+    issued: IWmoDate | null;
+    start: IWmoDate | null;
+    end: IWmoDate | null;
+    tcpod: INous42HeaderTcpod | null;
+    correction: boolean | null;
+    amendment: boolean | null;
 }
 
 export class Nous42Header implements IWmoObject {
@@ -128,15 +145,15 @@ export class Nous42Header implements IWmoObject {
         this.amendment = !!tcpodNo[6];
     }
 
-    public toJSON(): object {
+    public toJSON(): INous42Header {
         return {
-            'awips': this.awips,
-            'issued': this.issued,
-            'start': this.start,
-            'end': this.end,
-            'tcpod': this.tcpod,
-            'correction': this.correction,
-            'amendment': this.amendment
+            awips: this.awips,
+            issued: this.issued.toJSON(),
+            start: this.start.toJSON(),
+            end: this.end.toJSON(),
+            tcpod: this.tcpod,
+            correction: this.correction,
+            amendment: this.amendment
         };
     }
 }
@@ -153,6 +170,13 @@ export interface INous42Canceled {
     tcpodSeq?: string | null;
     required?: IWmoDateRange | null;
     canceledAt?: WmoDate;
+}
+
+export interface INous42Basin {
+    storms: INous42Storm[];
+    outlook: INous42Outlook[];
+    remarks: string[];
+    canceled: INous42Canceled[];
 }
 
 export class Nous42Basin implements IWmoObject {
@@ -309,14 +333,20 @@ export class Nous42Basin implements IWmoObject {
         });
     }
 
-    public toJSON(): object {
+    public toJSON(): INous42Basin {
         return {
-            'storms': this.storms,
-            'outlook': this.outlook,
-            'remarks': this.remarks,
-            'canceled': this.canceled,
+            storms: this.storms.map(s => s.toJSON()),
+            outlook: this.outlook,
+            remarks: this.remarks,
+            canceled: this.canceled
         };
     }
+}
+
+export interface INous42Storm {
+    name: string | null;
+    text: string | null;
+    missions: INous42Mission[]
 }
 
 export class Nous42Storm implements IWmoObject {
@@ -482,10 +512,11 @@ export class Nous42Storm implements IWmoObject {
         }
     }
 
-    public toJSON(): object {
+    public toJSON(): INous42Storm {
         return {
-            'name': this.name,
-            'missions': this.missions
+            name: this.name,
+            text: this.text,
+            missions: this.missions.map(m => m.toJSON())
         };
     }
 }
@@ -493,6 +524,20 @@ export class Nous42Storm implements IWmoObject {
 export interface INous42Altitude {
     upper: number | null;
     lower: number | null;
+}
+
+export interface INous42Mission {
+    tcpod: INous42HeaderTcpod | null;
+    name: string | null;
+    required: IWmoDateRange | null;
+    id: string | null;
+    departure: IWmoDate | null;
+    coordinates: IWmoCoordinates | null;
+    window: IWmoDateRange | null;
+    altitude: INous42Altitude | null;
+    profile: string | null;
+    wra: boolean | null;
+    remarks: string | null;
 }
 
 export class Nous42Mission implements IWmoObject{
@@ -568,19 +613,19 @@ export class Nous42Mission implements IWmoObject{
         this.remarks = remarks && remarks[1] ? remarks[1] : null;
     }
 
-    public toJSON(): object {
+    public toJSON(): INous42Mission {
         return {
-            'tcpod': this.tcpod,
-            'name': this.name,
-            'required': this.required,
-            'id': this.id,
-            'departure': this.departure,
-            'coordinates': this.coordinates,
-            'window': this.window,
-            'altitude': this.altitude,
-            'profile': this.profile,
-            'wra': this.wra,
-            'remarks': this.remarks
+            tcpod: this.tcpod,
+            name: this.name,
+            required: this.required,
+            id: this.id,
+            departure: this.departure?.toJSON() ?? null,
+            coordinates: this.coordinates,
+            window: this.window,
+            altitude: this.altitude,
+            profile: this.profile,
+            wra: this.wra,
+            remarks: this.remarks
         };
     }
 }

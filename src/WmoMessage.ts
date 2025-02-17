@@ -13,6 +13,8 @@
 import {IWmoObject} from "./WmoInterfaces.js"
 import {WmoFile} from "./WmoFile.js";
 
+export interface IWmoMessage { }
+
 export abstract class WmoMessage implements IWmoObject {
 
     protected readonly wmoFile: WmoFile;
@@ -21,6 +23,6 @@ export abstract class WmoMessage implements IWmoObject {
         this.wmoFile = wmoFile;
     }
 
-    public abstract toJSON(): object;
+    public abstract toJSON(): IWmoMessage;
 
 }
