@@ -44,6 +44,11 @@ export class ABXX20 extends WmoMessage {
 		// NWS National Hurricane Center Miami FL
 		this.issuedBy = p.assert('Expected TWO issued by line')[0];
 
+		// Sometimes there is a separate issued by
+		const secondaryIssuedBy = p.extract(/Issued by (.*?)$/);
+		if (secondaryIssuedBy && secondaryIssuedBy[1])
+			this.issuedBy = secondaryIssuedBy[1];
+
 		// Parse issued date
 		// 200 AM EDT Fri Oct 18 2024
 		const headerDate = p.assert('Expected date line')[0];
@@ -105,7 +110,7 @@ export class Abxx20AreaOfInterest implements IWmoObject {
 
 	public constructor(p: WmoParser) {
 		// Extract title (and optional id)
-		const titleLine = p.assert('Expected storm title line', /^\s*\d+\.\s+(.*?)(?:\s+\((.*?)\))?:\s*$/);
+		const titleLine = p.assert('Expected storm title line', /^\s*\d+\.\s+(.*?)(?:\s+\((.*?)\))?:?\s*$/);
 		this.title = titleLine[1] ?? null;
 		this.id = titleLine[2] ?? null;
 
@@ -124,7 +129,7 @@ export class Abxx20AreaOfInterest implements IWmoObject {
 
 		const exp = days === 2 ? '48\\s+hours' : `${days}\\s+days`;
 		const match = p.assert('Expected ' + days + '-day chance line',
-			new RegExp('\\s*\\*.*' + exp + '\\.+(.*?)\\.+(?:near\\s+)?(\\d+)\\s+percent'));
+			new RegExp('\\s*\\*.*' + exp + '\\.+(.*?)\\.+\\s*(?:near\\s+)?(\\d+)\\s+percent'));
 		return {
 			level: match[1] ?? 'unknown',
 			chance: parseInt(match[2] ?? 'NaN')
