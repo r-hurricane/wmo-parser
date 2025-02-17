@@ -88,7 +88,7 @@ export class AbxxAreaOfInterest implements IWmoObject {
 
 	public constructor(p: WmoParser) {
 		// Extract title (and optional id)
-		const titleLine = p.assert('Expected storm title line', /^\s*\d+\.\s+(.*?)(?:\s+\((.*?)\))?$/);
+		const titleLine = p.assert('Expected storm title line', /^\s*\d+\.\s+(.*?)(?:\s+\((.*?)\))?:\s*$/);
 		this.title = titleLine[1] ?? null;
 		this.id = titleLine[2] ?? null;
 
@@ -107,7 +107,7 @@ export class AbxxAreaOfInterest implements IWmoObject {
 
 		const exp = days === 2 ? '48\\s+hours' : `${days}\\s+days`;
 		const match = p.assert('Expected ' + days + '-day chance line',
-			new RegExp('\\s*\\*.*' + exp + '\\.+(.*?)\\.+(\\d+)\\s+percent'));
+			new RegExp('\\s*\\*.*' + exp + '\\.+(.*?)\\.+(?:near\\s+)?(\\d+)\\s+percent'));
 		return {
 			level: match[1] ?? 'unknown',
 			chance: parseInt(match[2] ?? 'NaN')
