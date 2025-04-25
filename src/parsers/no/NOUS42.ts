@@ -77,6 +77,7 @@ export interface INous42Header {
     tcpod: INous42HeaderTcpod | null;
     correction: boolean | null;
     amendment: boolean | null;
+    remark: string | null;
 }
 
 export class Nous42Header implements IWmoObject {
@@ -88,6 +89,7 @@ export class Nous42Header implements IWmoObject {
     public readonly tcpod: INous42HeaderTcpod;
     public readonly correction: boolean;
     public readonly amendment: boolean;
+    public readonly remark: string;
 
     constructor(p: WmoParser) {
         // Extract the AWIPS product type (REPRPD)
@@ -143,6 +145,9 @@ export class Nous42Header implements IWmoObject {
         };
         this.correction = !!tcpodNo[5];
         this.amendment = !!tcpodNo[6];
+
+        // Occasionally, there might be a general remark in the header before the basins
+        this.remark = p.extractUntil(/^\s*([A-Z]\. |\d+\. |II+\. |NOTE: |\$\$)/);
     }
 
     public toJSON(): INous42Header {
@@ -153,7 +158,8 @@ export class Nous42Header implements IWmoObject {
             end: this.end.toJSON(),
             tcpod: this.tcpod,
             correction: this.correction,
-            amendment: this.amendment
+            amendment: this.amendment,
+            remark: this.remark
         };
     }
 }

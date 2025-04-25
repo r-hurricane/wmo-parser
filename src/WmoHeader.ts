@@ -60,9 +60,28 @@ export class WmoHeader implements IWmoObject {
         if (!abbvHeading)
             parser.error('Invalid WMO message: Missing Abbreviated Heading. First line should be the Abbreviated Heading as defined at https://www.weather.gov/tg/head');
 
+        // Get designator and station
         this.designator = abbvHeading[1] ? abbvHeading[1].toUpperCase() : parser.error('Failed to parse WMO Designator from heading.');
         this.station = abbvHeading[2] ? abbvHeading[2].toUpperCase() : parser.error('Failed to parse WMO Station from heading.');
-        this.datetime = new WmoDate(`${abbvHeading[3]} ${abbvHeading[4]}:${abbvHeading[5]}Z`, 'dd HH:mmX', parser.getDateContext());
+
+        // If date part is "after" the context data, use last month
+        const ctxDate = parser.getDateContext();
+        let wmoMon = ctxDate.getUTCMonth()+1;
+        let wmoYr = ctxDate.getUTCFullYear();
+        let wmoDate = parseInt(abbvHeading[3] ?? 'NaN');
+        if (!isNaN(wmoDate) && wmoDate > ctxDate.getUTCDate()) {
+            // If month is Jan, change to December and decrease year...
+            if (wmoMon == 1) {
+                wmoMon = 12;
+                --wmoYr;
+            } else {
+                // Otherwise, just decrease month
+                --wmoMon;
+            }
+        }
+
+        // Parse date
+        this.datetime = new WmoDate(`${wmoYr}-${wmoMon}-${abbvHeading[3]} ${abbvHeading[4]}:${abbvHeading[5]}Z`, 'yyyy-MM-dd HH:mmX', ctxDate);
 
         // Process Delays, Corrections, Amendments, and Segments
         if (abbvHeading[6]) {
