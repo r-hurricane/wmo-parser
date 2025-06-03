@@ -262,7 +262,7 @@ export class Nous42Basin implements IWmoObject {
                 text = multiStart[1];
 
             // Loop until either another outlook line [A-Z] the next ones mentioned above (basin, note, etc.)
-            text = p.extractUntil(/^\s*([A-Z]\. |\d+\. |II+\. |NOTE: |\$\$)/);
+            text += p.extractUntil(/^\s*([A-Z]\. |\d+\. |II+\. |NOTE: |\$\$)/);
 
             // Add to the outlook list
             this.outlook.push({
