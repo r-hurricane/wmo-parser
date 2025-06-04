@@ -456,9 +456,17 @@ export class Nous42Storm implements IWmoObject {
         // Group 3 - Longitude Number
         // Group 4 - Longitude E or W
         // Group 5 - Optional second flight separation
-        const coordinates = p.extractAll(/D\. (?:(\d+\.\d+)([NS]) (\d+\.\d+)([EW])|(NA))($|\s{2})/g);
-        if (!coordinates)
-            p.error('Expected a Flight D. Data Line');
+        let coordinates = p.extractAll(/D\. (?:(\d+\.\d+)([NS]) (\d+\.\d+)([EW])|(NA))($|\s{2})/g);
+        let coordText: string | undefined = undefined;
+        if (!coordinates) {
+            // Check for a buoy deployment (multi line/coordinates)
+            coordText = p.extractUntil(/E\..*$/g);
+            if (!coordText)
+                p.error('Expected a Flight D. Data Line');
+
+            // Try and match at least one coordinate
+            coordinates = p.extractAll(/(\d+\.\d+)([NS]) (\d+\.\d+)([EW])|(NA)/g);
+        }
 
         // E. Fix window
         // Group 0 - Full match of line
@@ -510,7 +518,7 @@ export class Nous42Storm implements IWmoObject {
                 required: requiredDates[i],
                 id: missionIdentifiers[i],
                 departure: departures[i],
-                coordinates: coordinates[i],
+                coordinates: coordinates ? coordinates[i] : undefined,
                 fixWindow: fixWindows[i],
                 altitude: altitudes[i],
                 profile: profiles[i],
