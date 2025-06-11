@@ -55,7 +55,8 @@ export class ABXX20 extends WmoMessage {
 		this.issuedOn = new WmoDate(headerDate, 'hmm a XXX EEE MMM dd yyyy');
 		
 		// For the North Atlantic...Caribbean Sea and the Gulf of Mexico:
-		this.for = p.assert('Expected TWO "for" line')[0];
+		this.for = p.extractUntil(/^For the.*$/);
+		this.for += p.assert('Expected TWO "for" line', /^For the.*$/)[0];
 
 		// If next line starts with "Active Systems:"
 		const activeLine = p.extract(/Active Systems:/);
