@@ -134,12 +134,12 @@ export class Nous42Header implements IWmoObject {
 
         // Extract TCPOD number
         const tcpodNo = p.assert(
-            'Expected TCPOD NUMBER line "TCPOD NUMBER...##-###( CORRECTION| AMENDMENT)?"',
-            /(WS|TC)POD NUMBER\.*((\d+)-(\d+))( CORRECTION)?( AMENDMENT)?/);
+            'Expected TCPOD NUMBER line "NUMBER...##-###( CORRECTION| AMENDMENT)?"',
+            /(?:(WS|TC)POD )?NUMBER\.*((\d+)-(\d+))( CORRECTION)?( AMENDMENT)?/);
         //   1:TYPE POD NUMBER...2:3:YY-4:SEQ 5:CORRECTION  6:AMENDMENT
         this.tcpod = {
             full: `${tcpodNo[1]}-${tcpodNo[2]}`,
-            tc: tcpodNo[1] === 'TC',
+            tc: tcpodNo[1] !== 'WS',
             yr: tcpodNo[3] ?? null,
             seq: tcpodNo[4] ?? null
         };
