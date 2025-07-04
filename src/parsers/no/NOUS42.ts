@@ -445,7 +445,7 @@ export class Nous42Storm implements IWmoObject {
         // Group 2 - Departure time
         // Group 3 - Optional changed flag
         // Group 4 - Optional second flight separation
-        const departures = p.extractAll(/C\. (\d{2})\/(\d{4})Z(\s\(CHANGED\))?($|\s{2})/g);
+        const departures = p.extractAll(/C\. (\d{2})\/(\d{3,4})Z(\s\(CHANGED\))?($|\s{2})/g);
         if (!departures)
             p.error('Expected a Flight C. Data Line');
 
@@ -590,9 +590,9 @@ export class Nous42Mission implements IWmoObject{
 
         if (required) {
             this.required = {
-                start: new WmoDate(`${required[1]} ${required[2]}Z`, 'dd HHmmX', tcpodDate),
+                start: new WmoDate(`${required[1]} ${required[2]}Z`, `dd ${required[2] && required[2].length > 3 ? 'HHmm' : 'Hmm'}X`, tcpodDate),
                 end: required[3]
-                    ? new WmoDate(`${required[5] || required[1]} ${required[6]}Z`, 'dd HHmmX', tcpodDate)
+                    ? new WmoDate(`${required[5] || required[1]} ${required[6]}Z`, `dd ${required[6] && required[6].length > 3 ? 'HHmm' : 'Hmm'}X`, tcpodDate)
                     : null
             };
         }
@@ -600,7 +600,7 @@ export class Nous42Mission implements IWmoObject{
         this.id = id && id[1] ? id[1] : null;
 
         if (departure)
-            this.departure = new WmoDate(`${departure[1]} ${departure[2]}Z`, 'dd HHmmX', tcpodDate);
+            this.departure = new WmoDate(`${departure[1]} ${departure[2]}Z`, `dd ${departure[2] && departure[2].length > 3 ? 'HHmm' : 'Hmm'}X`, tcpodDate);
 
         if (coordinates && coordinates[5] !== 'NA')
         {
@@ -612,8 +612,8 @@ export class Nous42Mission implements IWmoObject{
 
         if (fixWindow && fixWindow[5] !== 'NA') {
             this.window = {
-                start: new WmoDate(`${fixWindow[1]} ${fixWindow[2]}Z`, 'dd HHmmX', tcpodDate),
-                end: new WmoDate(`${fixWindow[3]} ${fixWindow[4]}Z`, 'dd HHmmX', tcpodDate)
+                start: new WmoDate(`${fixWindow[1]} ${fixWindow[2]}Z`, `dd ${fixWindow[2] && fixWindow[2].length > 3 ? 'HHmm' : 'Hmm'}X`, tcpodDate),
+                end: new WmoDate(`${fixWindow[3]} ${fixWindow[4]}Z`, `dd ${fixWindow[4] && fixWindow[4].length > 3 ? 'HHmm' : 'Hmm'}X`, tcpodDate)
             };
         }
 
