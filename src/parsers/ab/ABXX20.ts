@@ -65,6 +65,9 @@ export class ABXX20 extends WmoMessage {
 		}
 		p.skipEmpty();
 
+		// Extract prefaced additional remarks
+		this.remark = p.extractUntil(/^\s*\d+\..*$/);
+
 		// Extract storms
 		let next = p.peek();
 		while(next && next.match(/^\s*\d+\..*$/)) {
@@ -73,7 +76,12 @@ export class ABXX20 extends WmoMessage {
 		}
 
 		// Extract any additional remarks
-		this.remark = p.extractUntil(/\$\$/);
+		const addRemark = p.extractUntil(/\$\$/);
+		if (addRemark && addRemark.length > 0) {
+			this.remark = this.remark && this.remark.length > 0
+				? `${this.remark} ${addRemark}`
+				: addRemark;
+		}
 	}
 	
 	public override toJSON(): IAbxx20 {
