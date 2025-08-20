@@ -235,7 +235,7 @@ export class Nous42Basin implements IWmoObject {
     processOutlook(p: WmoParser, optional: boolean = false) {
         // Get outlook line
         let outlookLine = p.extract(
-            /\d+\. (?:(?:ADDITIONAL|SUCCEEDING)\s+DAY\s+OUTLOOK|OUTLOOK\s+FOR\s+SUCCEEDING\s+DAY)(?::|\.+)(.*)$/);
+            /\d+\. (?:(?:ADDITIONAL|SUCCEEDING)\s+DAY\s+OUTLOOK|OUTLOOK\s+FOR\s+SUCCEEDING\s+DAY)\s*(?::|\.+)(.*)$/);
         if (!outlookLine) {
             // If not optional, throw error
             if (!optional)
