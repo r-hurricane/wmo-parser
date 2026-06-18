@@ -138,7 +138,7 @@ export class Abxx20AreaOfInterest implements IWmoObject {
 
 		const exp = days === 2 ? '48\\s+hours' : `${days}\\s+days`;
 		const match = p.assert('Expected ' + days + '-day chance line',
-			new RegExp('\\s*\\*.*' + exp + '\\.+(.*?)\\.+\\s*(?:near\\s+)?(\\d+)\\s+percent'));
+			new RegExp('.*Formation\s*chance.*' + exp + '\\.+(.*?)\\.+\\s*(?:near\\s+)?(\\d+)\\s+percent', 'i'));
 		return {
 			level: match[1] ?? 'unknown',
 			chance: parseInt(match[2] ?? 'NaN')
