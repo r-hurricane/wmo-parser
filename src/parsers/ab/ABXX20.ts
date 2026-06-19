@@ -124,7 +124,7 @@ export class Abxx20AreaOfInterest implements IWmoObject {
 		this.id = titleLine[2] ?? null;
 
 		// Extract text until first * line
-		this.text = p.extractUntil(/^.*\*\s*Formation.*$/);
+		this.text = p.extractUntil(/^.*\*?\s*Formation.*$/);
 
 		// Extract 2 day and 7 day chances
 		this.twoDay = this.extractChance(p, 2);
